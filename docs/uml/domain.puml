@@ -1,0 +1,18 @@
+@startuml
+title Calculator Domain
+
+class CalculatorState {
+  double current
+  optional<double> stored
+  char op
+  bool hasOp
+}
+
+class CalculatorEvent
+class DisplayUpdated
+class Error
+
+CalculatorEvent <|-- DisplayUpdated
+CalculatorEvent <|-- Error
+
+@enduml

@@ -1,0 +1,7 @@
+set(__QT_DEPLOY_TARGET_app_FILE C:/Users/kouic/Documents/cpplang/Calculator/build/src/libapp.a)
+set(__QT_DEPLOY_TARGET_app_TYPE STATIC_LIBRARY)
+set(__QT_DEPLOY_TARGET_ui_FILE C:/Users/kouic/Documents/cpplang/Calculator/build/src/libui.a)
+set(__QT_DEPLOY_TARGET_ui_TYPE STATIC_LIBRARY)
+set(__QT_DEPLOY_TARGET_QtCalculator_FILE C:/Users/kouic/Documents/cpplang/Calculator/build/src/QtCalculator.exe)
+set(__QT_DEPLOY_TARGET_QtCalculator_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_QtCalculator_RUNTIME_DLLS C:/msys64/ucrt64/bin/Qt6Widgets.dll;C:/msys64/ucrt64/bin/Qt6Gui.dll;C:/msys64/ucrt64/bin/Qt6Core.dll)

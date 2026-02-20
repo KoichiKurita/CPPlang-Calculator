@@ -1,0 +1,15 @@
+@startuml
+title Calculator Button Flow
+
+actor User
+participant UI
+participant Controller
+participant Domain
+
+User -> UI : press button
+UI -> Controller : Input
+Controller -> Domain : pure function
+Domain --> Controller : (state, event)
+Controller -> UI : handleEvent(event)
+
+@enduml

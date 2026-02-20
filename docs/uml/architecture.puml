@@ -1,0 +1,23 @@
+@startuml
+title Qt Calculator Architecture
+
+package UI {
+  interface ICalculatorUI
+  class QtCalculatorUI
+  ICalculatorUI <|.. QtCalculatorUI
+}
+
+package Application {
+  class CalculatorController
+}
+
+package "Domain (Pure)" {
+  class CalculatorState
+  class CalculatorEvent
+  class CalculatorLogic
+}
+
+CalculatorController --> ICalculatorUI
+CalculatorController --> CalculatorLogic
+
+@enduml

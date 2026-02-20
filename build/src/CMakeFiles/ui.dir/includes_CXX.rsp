@@ -1,0 +1,1 @@
+-IC:/Users/kouic/Documents/cpplang/Calculator/build/src/ui_autogen/include -IC:/Users/kouic/Documents/cpplang/Calculator/src -isystem C:/msys64/ucrt64/include/qt6/QtWidgets -isystem C:/msys64/ucrt64/include/qt6 -isystem C:/msys64/ucrt64/include/qt6/QtCore -isystem "C:/msys64/ucrt64/share/qt6/mkspecs/win32-g++" -isystem C:/msys64/ucrt64/include/qt6/QtGui
