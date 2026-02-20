@@ -156,14 +156,14 @@ The executable will automatically be attached to the GitHub Release.
 ## 📊 Architectural Consistency
 
 This calculator shares the same architectural philosophy as the Number Guess Game project:
-```bat
+
 | Aspect           | Calculator | Number Guess Game |
 | ---------------- | ---------- | ----------------- |
 | Pure Domain      | ✅          | ✅                 |
 | Variant Events   | ✅          | ✅                 |
 | Clean Separation | ✅          | ✅                 |
 | CI/CD            | ✅          | ✅                 |
-```
+
 
 ## 🧪 Testability
 
