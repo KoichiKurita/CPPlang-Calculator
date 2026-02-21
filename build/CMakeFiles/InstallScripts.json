@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"C:/Users/kouic/Documents/cpplang/Calculator/build/cmake_install.cmake",
-		"C:/Users/kouic/Documents/cpplang/Calculator/build/src/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
