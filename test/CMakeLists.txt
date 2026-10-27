@@ -11,7 +11,8 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(CalculatorLogicTest
     CalculatorLogicTest.cpp
-    CalculatorControllerTest.cpp        # ← 追加
+    CalculatorControllerTest.cpp
+    NumberFormatTest.cpp
 )
 target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings)
 

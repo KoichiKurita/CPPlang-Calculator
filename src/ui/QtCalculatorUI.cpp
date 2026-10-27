@@ -1,4 +1,5 @@
 #include "QtCalculatorUI.h"
+#include "NumberFormat.h"
 
 #include <QVBoxLayout>
 #include <QGridLayout>
@@ -80,7 +81,7 @@ void QtCalculatorUI::handleEvent(const CalculatorEvent& event) {
         using T = std::decay_t<decltype(e)>;
 
         if constexpr (std::is_same_v<T, DisplayUpdated>) {
-            display_->setText(QString::number(e.value));
+            display_->setText(QString::fromStdString(formatNumber(e.value)));
         }
         else if constexpr (std::is_same_v<T, Error>) {
             QMessageBox::warning(this, "Error", e.message);
