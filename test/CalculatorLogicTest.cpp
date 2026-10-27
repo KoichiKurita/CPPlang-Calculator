@@ -19,7 +19,7 @@ TEST(CalculatorLogicTest, Addition) {
     auto [s3, e3] = inputDigit(s2, 3);
     auto [s4, e4] = calculate(s3);
 
-    EXPECT_DOUBLE_EQ(displayed(e4), 999.0);
+    EXPECT_DOUBLE_EQ(displayed(e4), 5.0);
 }
 
 TEST(CalculatorLogicTest, ContinuousCalculation) {
@@ -28,7 +28,7 @@ TEST(CalculatorLogicTest, ContinuousCalculation) {
     auto [s2, e2] = inputOperator(s1, '+');
     auto [s3, e3] = inputDigit(s2, 3);
     auto [s4, e4] = inputOperator(s3, '+');
-    EXPECT_DOUBLE_EQ(displayed(e4), 999.0); // 途中結果が表示される
+    EXPECT_DOUBLE_EQ(displayed(e4), 5.0); // 途中結果が表示される
     auto [s5, e5] = inputDigit(s4, 4);
     auto [s6, e6] = calculate(s5);
 
