@@ -1,0 +1,40 @@
+# Changelog
+
+このプロジェクトの主な変更履歴です。
+形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、
+バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
+
+## [Unreleased]
+
+## [1.1.0] - 2026-10-28
+### Added
+- PR・Issue テンプレート、CHANGELOG、.editorconfig
+- 改行コードを LF に統一する .gitattributes 設定
+- GoogleTest によるドメイン層のユニットテスト
+- Qt なしでドメイン層をビルド・テストできる `CALC_BUILD_GUI` オプション
+- LICENSE（MIT）
+
+### Changed
+- CI を刷新：Linux（Qt なし・ASan/UBSan）と Windows（GUI）の2ジョブ構成、最小権限化、同一ブランチの重複実行をキャンセル
+- README を現在の構成に合わせて更新（テスト・品質/セキュリティ・配布・開発フローを追記）
+- CI ワークフローのファイル名を windows.yml から ci.yml に変更
+
+### Fixed
+- CI の MSYS2 実行環境が UCRT64 になっておらずビルドできなかった問題
+- `CalculatorController::run()` 終了後に破棄済みのローカル変数を参照していた未定義動作（ダングリング参照）
+- 演算子を連続で押すと計算が実行されていた問題（演算子を置き換えるよう修正）
+- 連続計算中の0除算エラーが表示されなかった問題
+- 入力桁数の上限がなく inf になっていた問題。入力値の検証とオーバーフロー検出を追加
+- 7桁以上の数値が指数表記（例: 1.23457e+06）で表示されていた問題
+- テストが失敗しても CI が成功扱いになっていた問題
+- Release の exe が Qt 未導入の PC で起動しなかった問題（Qt/MinGW の DLL を同梱した zip と SHA256 を公開）
+
+## [1.0.0] - 2026-10-27
+### Added
+- 四則演算・連続計算・クリア機能を持つ Qt6 電卓
+- 純粋関数によるドメイン層とレイヤードアーキテクチャ
+- GitHub Actions による Windows ビルドと Release 作成
+
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/KoichiKurita/CPPlang-Calculator/releases/tag/v1.0.0
