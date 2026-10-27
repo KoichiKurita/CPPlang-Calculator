@@ -11,8 +11,9 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(CalculatorLogicTest
     CalculatorLogicTest.cpp
+    CalculatorControllerTest.cpp        # ← 追加
 )
-target_link_libraries(CalculatorLogicTest PRIVATE domain GTest::gtest_main calc_warnings)
+target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings)
 
 include(GoogleTest)
 gtest_discover_tests(CalculatorLogicTest)
