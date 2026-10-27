@@ -1,4 +1,21 @@
-# CMakeとMakefileと.cファイルを言語統計から除外する
-*Makefile* linguist-detectable=false
-*Cmake* linguist-detectable=false
-*.c linguist-detectable=false
+# =========================
+# 改行コード：リポジトリ内では LF に統一（Windows/Linux 混在対策）
+# =========================
+* text=auto eol=lf
+
+# Windows 専用スクリプトは CRLF のまま扱う
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# バイナリ（改行変換・差分表示の対象外）
+*.png binary
+*.jpg binary
+*.ico binary
+
+# =========================
+# GitHub の言語統計から除外
+# =========================
+CMakeLists.txt linguist-detectable=false
+*.cmake        linguist-detectable=false
+*Makefile*     linguist-detectable=false
+*.c            linguist-detectable=false
