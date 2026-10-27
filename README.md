@@ -39,11 +39,46 @@ Application (Controller)
 Domain (Pure Functions)
 ```
 
-### Architecture UML
+### Architecture Diagram
 
-![Architecture](docs/image/architecture.png)
-
-PlantUML source: `docs/uml/architecture.puml`
+```mermaid
+classDiagram
+    direction LR
+    namespace UI {
+        class ICalculatorUI {
+            <<interface>>
+            +onInput(handler)
+            +handleEvent(event)
+        }
+        class QtCalculatorUI
+        class NumberFormat {
+            <<Qt-free>>
+            +formatNumber(double) string
+        }
+    }
+    namespace Application {
+        class CalculatorController {
+            -ICalculatorUI ui_
+            -CalculatorState state_
+            +run()
+            -handle(Input)
+        }
+    }
+    namespace Domain {
+        class CalculatorLogic {
+            <<pure functions>>
+        }
+        class CalculatorState
+        class CalculatorEvent
+    }
+    ICalculatorUI <|.. QtCalculatorUI
+    QtCalculatorUI ..> NumberFormat
+    CalculatorController --> ICalculatorUI
+    CalculatorController *-- CalculatorState : owns
+    CalculatorController ..> CalculatorLogic
+    CalculatorLogic ..> CalculatorState
+    CalculatorLogic ..> CalculatorEvent
+```
 
 - The **Domain** and **Application** layers have zero dependency on Qt.
 - The Controller **owns the calculator state** for its entire lifetime.
@@ -63,11 +98,38 @@ The domain consists of:
   - `calculate`
   - `clearAll`
 
-### Domain UML
+### Domain Diagram
 
-![Domain](docs/image/domain.png)
-
-PlantUML source: `docs/uml/domain.puml`
+```mermaid
+classDiagram
+    class CalculatorState {
+        +double current
+        +optional~double~ stored
+        +char op
+        +bool hasOp
+        +bool enteringNumber
+    }
+    class CalculatorEvent {
+        <<variant>>
+    }
+    class DisplayUpdated {
+        +double value
+    }
+    class Error {
+        +const char* message
+    }
+    class CalculatorLogic {
+        <<pure functions>>
+        +inputDigit(state, digit) pair
+        +inputOperator(state, op) pair
+        +calculate(state) pair
+        +clearAll() pair
+    }
+    CalculatorEvent <|-- DisplayUpdated
+    CalculatorEvent <|-- Error
+    CalculatorLogic ..> CalculatorState : returns new state
+    CalculatorLogic ..> CalculatorEvent : returns event
+```
 
 ### Design Principles
 
@@ -89,9 +151,29 @@ When a button is pressed:
 
 ### Sequence Diagram
 
-![Sequence](docs/image/sequence.png)
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as QtCalculatorUI
+    participant C as CalculatorController
+    participant D as Domain (pure functions)
+    participant F as formatNumber
+    User->>UI: press button
+    UI->>C: Input
+    C->>D: inputDigit / inputOperator / calculate / clearAll
+    D-->>C: (newState, event)
+    C->>C: state_ = newState
+    C->>UI: handleEvent(event)
+    alt DisplayUpdated
+        UI->>F: formatNumber(value)
+        F-->>UI: "1234567"
+        UI-->>User: update display
+    else Error
+        UI-->>User: show error dialog
+    end
+```
 
-PlantUML source: `docs/uml/sequence.puml`
+> Diagrams are written in [Mermaid](https://mermaid.js.org/) and rendered natively by GitHub, so they are versioned as text alongside the code.
 
 ---
 
@@ -138,9 +220,6 @@ CPPlang-Calculator/
 │  ├─ ui/            # Qt UI + Qt-free number formatter
 │  └─ main.cpp
 ├─ test/             # GoogleTest unit tests
-├─ docs/
-│  ├─ uml/           # PlantUML sources
-│  └─ image/         # Rendered diagrams
 ├─ .github/
 │  ├─ workflows/ci.yml
 │  ├─ ISSUE_TEMPLATE/

@@ -5,6 +5,8 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+### Changed
+- 設計図を PlantUML + PNG から Mermaid（README に直接記述）に移行し、v1.1.0 の実装に合わせて更新
 
 ## [1.1.0] - 2026-10-28
 ### Added
