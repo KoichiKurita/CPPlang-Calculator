@@ -10,9 +10,12 @@
 - 改行コードを LF に統一する .gitattributes 設定
 - GoogleTest によるドメイン層のユニットテスト
 - Qt なしでドメイン層をビルド・テストできる `CALC_BUILD_GUI` オプション
+- LICENSE（MIT）
 
 ### Changed
 - CI を刷新：Linux（Qt なし・ASan/UBSan）と Windows（GUI）の2ジョブ構成、最小権限化、同一ブランチの重複実行をキャンセル
+- README を現在の構成に合わせて更新（テスト・品質/セキュリティ・配布・開発フローを追記）
+- CI ワークフローのファイル名を windows.yml から ci.yml に変更
 
 ### Fixed
 - CI の MSYS2 実行環境が UCRT64 になっておらずビルドできなかった問題
