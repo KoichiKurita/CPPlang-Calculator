@@ -27,6 +27,7 @@ jobs:
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-qt6
             mingw-w64-ucrt-x86_64-ninja
+            git
 
       # ③ Configure & Build（クリーンビルド）
       - name: Configure and Build

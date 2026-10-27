@@ -8,6 +8,11 @@
 ### Added
 - PR・Issue テンプレート、CHANGELOG、.editorconfig
 - 改行コードを LF に統一する .gitattributes 設定
+- GoogleTest によるドメイン層のユニットテスト
+- Qt なしでドメイン層をビルド・テストできる `CALC_BUILD_GUI` オプション
+
+### Fixed
+- CI の MSYS2 実行環境が UCRT64 になっておらずビルドできなかった問題
 
 ## [1.0.0] - 2026-10-27
 ### Added
