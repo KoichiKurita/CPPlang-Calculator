@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "domain/CalculatorLogic.h"
+#include <gtest/gtest.h>
 
 namespace {
 
