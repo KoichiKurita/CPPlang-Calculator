@@ -1,0 +1,38 @@
+---
+# 無効化しているチェックと理由
+# - bugprone-easily-swappable-parameters: (state, digit) など型の異なる引数でも検出され、誤検知が多い
+# - cppcoreguidelines-avoid-magic-numbers / readability-magic-numbers: 電卓の 9, 10 など意味が自明な定数まで検出される
+# - cppcoreguidelines-owning-memory: Qt は親ウィジェットが子を所有する設計で、new を直接使うのが正しい書き方
+# - cppcoreguidelines-pro-bounds-array-to-pointer-decay: Qt のマクロ（Q_OBJECT など）で検出される
+# - cppcoreguidelines-avoid-const-or-ref-data-members: Controller は UI を「所有しない・null にならない」参照で持つ設計
+# - misc-include-cleaner: Qt のヘッダ構成と相性が悪く誤検知が多い
+# - misc-non-private-member-variables-in-classes: 状態・イベントは意図的に public メンバの構造体にしている
+# - modernize-use-trailing-return-type: auto f() -> T 形式を強制するもので、スタイルの好みの問題
+# - modernize-use-nodiscard: 純粋関数に一律で [[nodiscard]] を求めるもの（今後の検討事項）
+# - readability-identifier-length: s, e, op など短く慣用的な名前まで検出される
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  cert-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/src/.*'
+FormatStyle: file
+...

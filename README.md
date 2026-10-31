@@ -207,6 +207,8 @@ ctest --test-dir build-noqt --output-on-failure
 | Compiler warnings | `-Wall -Wextra -Wpedantic` (`/W4` on MSVC) applied to project targets |
 | Supply chain | GoogleTest pinned by commit hash; release zip published with **SHA256 checksum** |
 | CI permissions | Least privilege (`contents: read`); write permission only for the release job |
+| Code style | `clang-format` (`.clang-format`), checked in CI |
+| Static analysis | `clang-tidy` (`.clang-tidy`) and `cppcheck`; findings are treated as errors |
 
 ---
 
@@ -266,6 +268,20 @@ ctest --test-dir build --output-on-failure
 | `CALC_BUILD_GUI` | `ON` | Build the Qt GUI application |
 | `CALC_BUILD_TESTS` | `ON` | Build unit tests |
 
+### Code Style & Static Analysis
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-clang-tools-extra mingw-w64-ucrt-x86_64-cppcheck
+
+# Format
+git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' | xargs clang-format -i
+
+# cppcheck
+cppcheck --enable=warning,style,performance,portability --std=c++17 --language=c++ \
+  -I src --library=qt --inline-suppr --suppress=missingIncludeSystem src test
+```
+
+clang-tidy runs in CI (`static-analysis` job).
 ---
 
 ## 📦 Download
@@ -291,6 +307,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | `linux-test` | Ubuntu | Qt-free build, all tests with ASan / UBSan |
 | `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, packaging with `windeployqt` + dependent DLLs, SHA256 |
 | `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the zip and checksum |
+| `static-analysis` | Ubuntu | clang-format check, clang-tidy, cppcheck |
 
 Release example:
 
@@ -308,6 +325,7 @@ git push origin v1.1.0
 - Branch rulesets require pull requests and passing CI (`linux-test`, `windows-build`)
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Changes are recorded in [CHANGELOG.md](CHANGELOG.md)
+- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `windows-build`)
 
 ---
 

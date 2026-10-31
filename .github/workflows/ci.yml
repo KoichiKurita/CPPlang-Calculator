@@ -36,7 +36,44 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
-  # ---- Windows：GUI ビルド + テスト + 配布用パッケージ作成 ----
+  # ---- 静的解析：フォーマット / clang-tidy / cppcheck ----
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-format-18 clang-tidy-18 cppcheck qt6-base-dev
+
+      # 整形した結果に差分があれば失敗（差分をログに表示）
+      - name: clang-format (check)
+        run: |
+          git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' | xargs clang-format-18 -i
+          git diff --exit-code
+
+      # clang-tidy はコンパイルオプションを compile_commands.json から読む
+      - name: Configure (export compile_commands.json)
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCALC_BUILD_TESTS=OFF
+
+      # Qt の moc が生成するファイルを用意するためにビルドしておく
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: clang-tidy
+        run: run-clang-tidy-18 -p build -quiet "$PWD/src/.*"
+
+      - name: cppcheck
+        run: >
+          cppcheck --enable=warning,style,performance,portability
+          --std=c++17 --language=c++ -I src --library=qt
+          --inline-suppr --suppress=missingIncludeSystem
+          --error-exitcode=1
+          src test
+  
+        # ---- Windows：GUI ビルド + テスト + 配布用パッケージ作成 ----
   windows-build:
     runs-on: windows-latest
     steps:
@@ -103,7 +140,7 @@ jobs:
   # ---- タグ push 時のみ Release を作成（両ジョブの成功が条件）----
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ linux-test, windows-build ]
+    needs: [ linux-test, static-analysis, windows-build ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
