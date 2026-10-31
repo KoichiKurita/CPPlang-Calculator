@@ -22,7 +22,7 @@ QtCalculatorUI::QtCalculatorUI() {
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
             auto* btn = new QPushButton(QString::number(number));
-            connect(btn, &QPushButton::clicked, this, [=] { emitDigit(number); });
+            connect(btn, &QPushButton::clicked, this, [this, number] { emitDigit(number); });
             grid->addWidget(btn, r, c);
             ++number;
         }
@@ -30,18 +30,18 @@ QtCalculatorUI::QtCalculatorUI() {
 
     // 0 ボタン
     auto* zero = new QPushButton("0");
-    connect(zero, &QPushButton::clicked, this, [=] { emitDigit(0); });
+    connect(zero, &QPushButton::clicked, this, [this] { emitDigit(0); });
     grid->addWidget(zero, 3, 1);
 
     // = ボタン
     auto* equal = new QPushButton("=");
-    connect(equal, &QPushButton::clicked, this, [=] { emitEqual(); });
+    connect(equal, &QPushButton::clicked, this, [this] { emitEqual(); });
     grid->addWidget(equal, 3, 2);
 
     // 演算子ボタン
     auto addOp = [&](const QString& text, char op, int r, int c) {
         auto* btn = new QPushButton(text);
-        connect(btn, &QPushButton::clicked, this, [=] { emitOp(op); });
+        connect(btn, &QPushButton::clicked, this, [this, op] { emitOp(op); });
         grid->addWidget(btn, r, c);
     };
 
@@ -54,7 +54,7 @@ QtCalculatorUI::QtCalculatorUI() {
 
     // C（クリア）ボタン
     auto* clear = new QPushButton("C");
-    connect(clear, &QPushButton::clicked, this, [=] {
+    connect(clear, &QPushButton::clicked, this, [this] {
         if (handler_) {
             handler_({InputType::Clear});
         }
