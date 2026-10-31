@@ -1,9 +1,9 @@
 #pragma once
 #include "ICalculatorUI.h"
-#include <QWidget>
-#include <QPushButton>
 #include <QGridLayout>
 #include <QLineEdit>
+#include <QPushButton>
+#include <QWidget>
 
 class QtCalculatorUI : public QWidget, public ICalculatorUI {
     Q_OBJECT

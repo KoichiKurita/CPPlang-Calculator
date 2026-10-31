@@ -3,12 +3,7 @@
 #include "../domain/CalculatorEvent.h"
 #include <functional>
 
-enum class InputType {
-    Digit,
-    Operator,
-    Equal,
-    Clear
-};
+enum class InputType { Digit, Operator, Equal, Clear };
 
 struct Input {
     InputType type;
