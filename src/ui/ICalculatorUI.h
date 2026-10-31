@@ -1,19 +1,27 @@
 #pragma once
 
 #include "../domain/CalculatorEvent.h"
+#include <cstdint>
 #include <functional>
 
-enum class InputType { Digit, Operator, Equal, Clear };
+enum class InputType : std::uint8_t { Digit, Operator, Equal, Clear };
 
 struct Input {
-    InputType type;
+    InputType type{};
     int value{0};
     char op{0};
 };
 
 class ICalculatorUI {
 public:
+    ICalculatorUI() = default;
     virtual ~ICalculatorUI() = default;
+
+    // インターフェースはコピー・ムーブしない（派生クラスのスライシングを防ぐ）
+    ICalculatorUI(const ICalculatorUI&) = delete;
+    ICalculatorUI& operator=(const ICalculatorUI&) = delete;
+    ICalculatorUI(ICalculatorUI&&) = delete;
+    ICalculatorUI& operator=(ICalculatorUI&&) = delete;
 
     virtual void onInput(std::function<void(Input)> handler) = 0;
     virtual void handleEvent(const CalculatorEvent& event) = 0;
