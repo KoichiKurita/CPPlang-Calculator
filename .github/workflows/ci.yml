@@ -21,7 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
 
       - name: Configure (tests only, sanitizers)
         run: >
@@ -36,15 +38,141 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  # ---- 静的解析：フォーマット / clang-tidy / cppcheck ----
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-tidy-18 cppcheck qt6-base-dev
+
+      # clang-format はローカル（MSYS2）と同じ版に固定する（版によって整形結果が異なるため）
+      - name: Install clang-format (pinned)
+        run: |
+          pipx install clang-format==23.1.3
+          clang-format --version
+
+      # 整形した結果に差分があれば失敗（差分をログに表示）
+      - name: clang-format (check)
+        run: |
+          git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' | xargs clang-format -i
+          git diff --exit-code
+
+      # clang-tidy はコンパイルオプションを compile_commands.json から読む
+      - name: Configure (export compile_commands.json)
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCALC_BUILD_TESTS=OFF
+
+      # Qt の moc が生成するファイルを用意するためにビルドしておく
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: clang-tidy
+        run: run-clang-tidy-18 -p build -quiet "$PWD/src/.*"
+
+      - name: cppcheck
+        run: >
+          cppcheck --enable=warning,style,performance,portability
+          --std=c++17 --language=c++ -I src --library=qt
+          --inline-suppr --suppress=missingIncludeSystem
+          --error-exitcode=1
+          src test
+  
+        # ---- カバレッジ計測（gcovr）：目標未達で失敗。main への push 時は GitHub Pages に公開 ----
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
+
+      - name: Install gcovr
+        run: pipx install gcovr==8.8
+
+      - name: Configure (coverage)
+        run: >
+          cmake -S . -B build
+          -DCALC_BUILD_GUI=OFF
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCALC_ENABLE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      # gtest_discover_tests がビルド時にテストを実行して作った計測データを消してから計測する
+      - name: Test
+        run: |
+          find build -name '*.gcda' -delete
+          ctest --test-dir build --output-on-failure
+
+      - name: Coverage report
+        run: |
+          mkdir -p coverage
+          gcovr --root . --filter 'src/' --object-directory build \
+            --exclude-unreachable-branches --exclude-throw-branches \
+            --print-summary \
+            --html-details coverage/index.html --html-title "CPPlang-Calculator Coverage" \
+            --json-summary coverage/summary.json \
+            --markdown-summary coverage/summary.md \
+            --fail-under-line 95 --fail-under-branch 90
+          cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      # shields.io の endpoint バッジ用 JSON を作る
+      - name: Create badge JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          pct = json.load(open("coverage/summary.json"))["line_percent"]
+          color = "brightgreen" if pct >= 95 else "green" if pct >= 90 else "yellow" if pct >= 80 else "red"
+          json.dump({"schemaVersion": 1, "label": "coverage", "message": f"{pct:.1f}%", "color": color},
+                    open("coverage/badge.json", "w"))
+          PY
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: coverage/
+
+  # ---- カバレッジレポートを GitHub Pages に公開（main への push 時のみ）----
+  deploy-coverage:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: coverage
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write    # Pages へのデプロイ
+      id-token: write # デプロイ元の正当性を OIDC で証明
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
   # ---- Windows：GUI ビルド + テスト + 配布用パッケージ作成 ----
   windows-build:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
 
       - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
           msystem: UCRT64
           update: true
@@ -67,6 +195,15 @@ jobs:
       - name: Run tests
         shell: msys2 {0}
         run: ctest --test-dir build-ci --output-on-failure
+
+      # 実行ファイルに ASLR / DEP が有効になっているかを検証（無効なら失敗）
+      - name: Verify binary hardening
+        shell: msys2 {0}
+        run: |
+          objdump -p build-ci/src/QtCalculator.exe | grep -A4 DllCharacteristics
+          for flag in DYNAMIC_BASE HIGH_ENTROPY_VA NX_COMPAT; do
+            objdump -p build-ci/src/QtCalculator.exe | grep -q "$flag" || { echo "::error::$flag is not set"; exit 1; }
+          done
 
       # exe 単体では Qt 未導入の PC で起動できないため、Qt / MinGW の DLL を同梱する
       - name: Package (windeployqt + dependent DLLs)
@@ -93,7 +230,7 @@ jobs:
           cat QtCalculator-windows-x64.zip.sha256
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: QtCalculator-Windows
           path: |
@@ -103,18 +240,18 @@ jobs:
   # ---- タグ push 時のみ Release を作成（両ジョブの成功が条件）----
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ linux-test, windows-build ]
+    needs: [ linux-test, static-analysis, coverage, windows-build ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: QtCalculator-Windows
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           generate_release_notes: true
           files: |

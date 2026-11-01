@@ -1,9 +1,9 @@
-#include <QApplication>
-#include "ui/QtCalculatorUI.h"
 #include "app/CalculatorController.h"
+#include "ui/QtCalculatorUI.h"
+#include <QApplication>
 
 int main(int argc, char* argv[]) {
-    QApplication app(argc, argv);
+    const QApplication app(argc, argv);
 
     QtCalculatorUI ui;
     CalculatorController controller(ui);
@@ -11,5 +11,5 @@ int main(int argc, char* argv[]) {
     controller.run();
     ui.show();
 
-    return app.exec();
+    return QApplication::exec();
 }

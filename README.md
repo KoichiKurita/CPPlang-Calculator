@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/KoichiKurita/CPPlang-Calculator/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KoichiKurita/CPPlang-Calculator/actions/workflows/ci.yml)
 [![GitHub release](https://img.shields.io/github/v/release/KoichiKurita/CPPlang-Calculator)](https://github.com/KoichiKurita/CPPlang-Calculator/releases)
+[![Coverage](https://img.shields.io/endpoint?url=https://koichikurita.github.io/CPPlang-Calculator/badge.json)](https://koichikurita.github.io/CPPlang-Calculator/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -20,7 +21,7 @@ This project intentionally applies the same architectural philosophy as the [Num
 - Continuous calculation (e.g. `2 + 3 + 4 = 9`)
 - Operator replacement on repeated input (e.g. `2 + * 3 = 6`)
 - Clear (`C`) button
-- Error handling: division by zero, overflow, invalid input
+- Error handling: division by zero, overflow, invalid input — shown in the display (no modal dialogs)
 - Up to 15 significant digits displayed without exponential notation
 - Event-driven Qt UI
 - Domain logic completely decoupled from UI
@@ -39,15 +40,55 @@ Application (Controller)
 Domain (Pure Functions)
 ```
 
-### Architecture UML
+### Architecture Diagram
 
-![Architecture](docs/image/architecture.png)
-
-PlantUML source: `docs/uml/architecture.puml`
+```mermaid
+classDiagram
+    direction LR
+    namespace UI {
+        class ICalculatorUI {
+            <<interface>>
+            +onInput(handler)
+            +handleEvent(event)
+        }
+        class QtCalculatorUI
+        class NumberFormat {
+            <<Qt-free>>
+            +formatNumber(double) string
+        }
+        class ErrorMessage {
+            <<Qt-free>>
+            +errorMessage(ErrorCode) string
+        }
+    }
+    namespace Application {
+        class CalculatorController {
+            -ICalculatorUI ui_
+            -CalculatorState state_
+            +run()
+            -handle(Input)
+        }
+    }
+    namespace Domain {
+        class CalculatorLogic {
+            <<pure functions>>
+        }
+        class CalculatorState
+        class CalculatorEvent
+    }
+    ICalculatorUI <|.. QtCalculatorUI
+    QtCalculatorUI ..> NumberFormat
+    QtCalculatorUI ..> ErrorMessage
+    CalculatorController --> ICalculatorUI
+    CalculatorController *-- CalculatorState : owns
+    CalculatorController ..> CalculatorLogic
+    CalculatorLogic ..> CalculatorState
+    CalculatorLogic ..> CalculatorEvent
+```
 
 - The **Domain** and **Application** layers have zero dependency on Qt.
 - The Controller **owns the calculator state** for its entire lifetime.
-- Display formatting (`formatNumber`) is a Qt-free pure function, so it is unit-tested as well.
+- Display formatting (`formatNumber`) and error messages (`errorMessage`) are Qt-free pure functions, so they are unit-tested as well.
 
 ---
 
@@ -55,7 +96,8 @@ PlantUML source: `docs/uml/architecture.puml`
 
 The domain consists of:
 
-- `CalculatorState`
+- `CalculatorState` with an optional `PendingOperation` (left operand + `Operator`)
+- `Operator` / `ErrorCode` (`enum class`)
 - `CalculatorEvent` (`std::variant<DisplayUpdated, Error>`)
 - Pure functions:
   - `inputDigit`
@@ -63,11 +105,57 @@ The domain consists of:
   - `calculate`
   - `clearAll`
 
-### Domain UML
+### Domain Diagram
 
-![Domain](docs/image/domain.png)
-
-PlantUML source: `docs/uml/domain.puml`
+```mermaid
+classDiagram
+    class CalculatorState {
+        +double current
+        +optional~PendingOperation~ pending
+        +bool enteringNumber
+    }
+    class PendingOperation {
+        +double lhs
+        +Operator op
+    }
+    class Operator {
+        <<enumeration>>
+        Add
+        Subtract
+        Multiply
+        Divide
+    }
+    class ErrorCode {
+        <<enumeration>>
+        NoOperation
+        DivisionByZero
+        Overflow
+        InvalidDigit
+    }
+    class CalculatorEvent {
+        <<variant>>
+    }
+    class DisplayUpdated {
+        +double value
+    }
+    class Error {
+        +ErrorCode code
+    }
+    class CalculatorLogic {
+        <<pure functions>>
+        +inputDigit(state, digit) pair
+        +inputOperator(state, op) pair
+        +calculate(state) pair
+        +clearAll() pair
+    }
+    CalculatorEvent <|-- DisplayUpdated
+    CalculatorEvent <|-- Error
+    CalculatorState o-- PendingOperation
+    PendingOperation --> Operator
+    Error --> ErrorCode
+    CalculatorLogic ..> CalculatorState : returns new state
+    CalculatorLogic ..> CalculatorEvent : returns event
+```
 
 ### Design Principles
 
@@ -75,6 +163,7 @@ PlantUML source: `docs/uml/domain.puml`
 - No framework dependencies
 - Deterministic state transitions
 - Every input is validated; errors are returned as events, never swallowed
+- **Invalid states are unrepresentable**: the left operand and operator exist only together (`std::optional<PendingOperation>`), and operators / errors are `enum class` values instead of `char` / strings
 
 ---
 
@@ -89,9 +178,31 @@ When a button is pressed:
 
 ### Sequence Diagram
 
-![Sequence](docs/image/sequence.png)
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as QtCalculatorUI
+    participant C as CalculatorController
+    participant D as Domain (pure functions)
+    participant F as formatNumber / errorMessage
+    User->>UI: press button
+    UI->>C: Input
+    C->>D: inputDigit / inputOperator / calculate / clearAll
+    D-->>C: (newState, event)
+    C->>C: state_ = newState
+    C->>UI: handleEvent(event)
+    alt DisplayUpdated
+        UI->>F: formatNumber(value)
+        F-->>UI: "1234567"
+        UI-->>User: update display
+    else Error
+        UI->>F: errorMessage(code)
+        F-->>UI: "Cannot divide by zero"
+        UI-->>User: show message in display
+    end
+```
 
-PlantUML source: `docs/uml/sequence.puml`
+> Diagrams are written in [Mermaid](https://mermaid.js.org/) and rendered natively by GitHub, so they are versioned as text alongside the code.
 
 ---
 
@@ -101,9 +212,10 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 
 | Test suite | Target | What it verifies |
 | --- | --- | --- |
-| `CalculatorLogicTest` | Domain | Arithmetic, continuous calculation, operator replacement, error propagation, input validation, digit limit, overflow |
-| `CalculatorControllerTest` | Application | State is kept after `run()` returns (uses a Qt-free `FakeUI`) |
+| `CalculatorLogicTest` | Domain | Four arithmetic operations, continuous calculation, operator replacement, error codes and propagation, input validation, digit limit, overflow |
+| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear, error replaced by next input (uses a Qt-free `FakeUI`) |
 | `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0` |
+| `ErrorMessageTest` | UI (Qt-free) | A message for every `ErrorCode` |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
 
@@ -111,6 +223,25 @@ Because the domain and application layers are Qt-free, tests can be built **with
 cmake -S . -B build-noqt -DCALC_BUILD_GUI=OFF
 cmake --build build-noqt
 ctest --test-dir build-noqt --output-on-failure
+```
+
+### Coverage
+
+Coverage is measured with **gcov / [gcovr](https://gcovr.com/)** in CI (`coverage` job).
+The job fails if line coverage drops below **95%** or branch coverage below **90%**.
+The HTML report for the latest release is published to [GitHub Pages](https://koichikurita.github.io/CPPlang-Calculator/).
+
+Measure locally:
+
+```bash
+python -m venv ~/.venv-gcovr && ~/.venv-gcovr/bin/pip install gcovr==8.8
+
+cmake -S . -B build-cov -G Ninja -DCALC_BUILD_GUI=OFF -DCMAKE_BUILD_TYPE=Debug -DCALC_ENABLE_COVERAGE=ON
+cmake --build build-cov
+find build-cov -name '*.gcda' -delete
+ctest --test-dir build-cov
+~/.venv-gcovr/bin/gcovr --root . --filter 'src/' --object-directory build-cov \
+  --exclude-unreachable-branches --exclude-throw-branches --print-summary
 ```
 
 ---
@@ -123,8 +254,12 @@ ctest --test-dir build-noqt --output-on-failure
 | Numeric safety | Input limited to 15 digits; `inf` / `NaN` results are reported as `Overflow` |
 | Memory safety | Linux CI runs all tests with **AddressSanitizer** and **UndefinedBehaviorSanitizer** |
 | Compiler warnings | `-Wall -Wextra -Wpedantic` (`/W4` on MSVC) applied to project targets |
-| Supply chain | GoogleTest pinned by commit hash; release zip published with **SHA256 checksum** |
-| CI permissions | Least privilege (`contents: read`); write permission only for the release job |
+| Supply chain | GoogleTest and all GitHub Actions pinned by commit SHA; Actions kept up to date by **Dependabot**; release zip published with **SHA256 checksum** |
+| Binary hardening | Stack protector, `_FORTIFY_SOURCE=2`, `_GLIBCXX_ASSERTIONS`; ASLR / DEP on Windows (verified in CI), PIE / Full RELRO on Linux |
+| Vulnerability reporting | Private vulnerability reporting via GitHub (see [SECURITY.md](SECURITY.md)) |
+| CI permissions | Least privilege (`contents: read`); write permission only for the release job; checkout without persisted credentials |
+| Code style | `clang-format` (`.clang-format`), checked in CI |
+| Static analysis | `clang-tidy` (`.clang-tidy`) and `cppcheck`; findings are treated as errors |
 
 ---
 
@@ -138,14 +273,13 @@ CPPlang-Calculator/
 │  ├─ ui/            # Qt UI + Qt-free number formatter
 │  └─ main.cpp
 ├─ test/             # GoogleTest unit tests
-├─ docs/
-│  ├─ uml/           # PlantUML sources
-│  └─ image/         # Rendered diagrams
 ├─ .github/
 │  ├─ workflows/ci.yml
+│  ├─ dependabot.yml
 │  ├─ ISSUE_TEMPLATE/
 │  └─ pull_request_template.md
 ├─ CHANGELOG.md
+├─ SECURITY.md
 └─ LICENSE
 ```
 
@@ -186,7 +320,26 @@ ctest --test-dir build --output-on-failure
 | --- | --- | --- |
 | `CALC_BUILD_GUI` | `ON` | Build the Qt GUI application |
 | `CALC_BUILD_TESTS` | `ON` | Build unit tests |
+| `CALC_ENABLE_COVERAGE` | `OFF` | Instrument code for coverage measurement (GCC) |
 
+### Code Style & Static Analysis
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-clang-tools-extra mingw-w64-ucrt-x86_64-cppcheck
+
+# Format
+git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' | xargs clang-format -i
+
+# cppcheck
+cppcheck --enable=warning,style,performance,portability --std=c++17 --language=c++ \
+  -I src --library=qt --inline-suppr --suppress=missingIncludeSystem src test
+```
+
+clang-tidy runs in CI (`static-analysis` job).
+
+CI pins **clang-format 23.1.3** (installed from PyPI) so that formatting results match the local MSYS2 version (23.x).
+Different clang-format versions can format the same code differently (e.g. alignment of trailing comments containing non-ASCII text),
+so keep the local major version in sync with the CI version.
 ---
 
 ## 📦 Download
@@ -210,8 +363,11 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | Job | Runner | Description |
 | --- | --- | --- |
 | `linux-test` | Ubuntu | Qt-free build, all tests with ASan / UBSan |
-| `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, packaging with `windeployqt` + dependent DLLs, SHA256 |
+| `coverage` | Ubuntu | Coverage with gcovr (fails below 95% lines / 90% branches); report in job summary |
+| `deploy-coverage` | Ubuntu | On push to `main`: publishes the HTML coverage report and badge to GitHub Pages |
+| `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, ASLR / DEP verification, packaging with `windeployqt` + dependent DLLs, SHA256 |
 | `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the zip and checksum |
+| `static-analysis` | Ubuntu | clang-format check, clang-tidy, cppcheck |
 
 Release example:
 
@@ -229,6 +385,7 @@ git push origin v1.1.0
 - Branch rulesets require pull requests and passing CI (`linux-test`, `windows-build`)
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Changes are recorded in [CHANGELOG.md](CHANGELOG.md)
+- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `coverage`, `windows-build`)
 
 ---
 

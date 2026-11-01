@@ -1,9 +1,9 @@
 #include "QtCalculatorUI.h"
+#include "ErrorMessage.h"
 #include "NumberFormat.h"
 
-#include <QVBoxLayout>
 #include <QGridLayout>
-#include <QMessageBox>
+#include <QVBoxLayout>
 
 QtCalculatorUI::QtCalculatorUI() {
     // 表示部
@@ -22,8 +22,7 @@ QtCalculatorUI::QtCalculatorUI() {
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
             auto* btn = new QPushButton(QString::number(number));
-            connect(btn, &QPushButton::clicked, this,
-                    [=] { emitDigit(number); });
+            connect(btn, &QPushButton::clicked, this, [this, number] { emitDigit(number); });
             grid->addWidget(btn, r, c);
             ++number;
         }
@@ -31,39 +30,35 @@ QtCalculatorUI::QtCalculatorUI() {
 
     // 0 ボタン
     auto* zero = new QPushButton("0");
-    connect(zero, &QPushButton::clicked, this,
-            [=] { emitDigit(0); });
+    connect(zero, &QPushButton::clicked, this, [this] { emitDigit(0); });
     grid->addWidget(zero, 3, 1);
 
     // = ボタン
     auto* equal = new QPushButton("=");
-    connect(equal, &QPushButton::clicked, this,
-            [=] { emitEqual(); });
+    connect(equal, &QPushButton::clicked, this, [this] { emitEqual(); });
     grid->addWidget(equal, 3, 2);
 
     // 演算子ボタン
-    auto addOp = [&](const QString& text, char op, int r, int c) {
+    auto addOp = [&](const QString& text, Operator op, int r, int c) {
         auto* btn = new QPushButton(text);
-        connect(btn, &QPushButton::clicked, this,
-                [=] { emitOp(op); });
+        connect(btn, &QPushButton::clicked, this, [this, op] { emitOp(op); });
         grid->addWidget(btn, r, c);
     };
 
-    addOp("+", '+', 0, 3);
-    addOp("-", '-', 1, 3);
-    addOp("*", '*', 2, 3);
-    addOp("/", '/', 3, 3);
+    addOp("+", Operator::Add, 0, 3);
+    addOp("-", Operator::Subtract, 1, 3);
+    addOp("*", Operator::Multiply, 2, 3);
+    addOp("/", Operator::Divide, 3, 3);
 
     mainLayout->addLayout(grid);
 
     // C（クリア）ボタン
     auto* clear = new QPushButton("C");
-    connect(clear, &QPushButton::clicked, this,
-            [=] {
-                if (handler_) {
-                    handler_({InputType::Clear});
-                }
-            });
+    connect(clear, &QPushButton::clicked, this, [this] {
+        if (handler_) {
+            handler_({InputType::Clear});
+        }
+    });
 
     mainLayout->addWidget(clear);
 
@@ -77,16 +72,18 @@ void QtCalculatorUI::onInput(std::function<void(Input)> handler) {
 }
 
 void QtCalculatorUI::handleEvent(const CalculatorEvent& event) {
-    std::visit([&](auto&& e) {
-        using T = std::decay_t<decltype(e)>;
+    std::visit(
+        [&](auto&& e) {
+            using T = std::decay_t<decltype(e)>;
 
-        if constexpr (std::is_same_v<T, DisplayUpdated>) {
-            display_->setText(QString::fromStdString(formatNumber(e.value)));
-        }
-        else if constexpr (std::is_same_v<T, Error>) {
-            QMessageBox::warning(this, "Error", e.message);
-        }
-    }, event);
+            if constexpr (std::is_same_v<T, DisplayUpdated>) {
+                display_->setText(QString::fromStdString(formatNumber(e.value)));
+            } else if constexpr (std::is_same_v<T, Error>) {
+                // モーダルダイアログは使わず表示欄に出す（次の入力で表示が更新される）
+                display_->setText(QString::fromUtf8(errorMessage(e.code)));
+            }
+        },
+        event);
 }
 
 void QtCalculatorUI::emitDigit(int d) {
@@ -95,7 +92,7 @@ void QtCalculatorUI::emitDigit(int d) {
     }
 }
 
-void QtCalculatorUI::emitOp(char op) {
+void QtCalculatorUI::emitOp(Operator op) {
     if (handler_) {
         handler_({InputType::Operator, 0, op});
     }

@@ -1,0 +1,19 @@
+# GitHub Actions の更新を週次でチェックし、develop 宛てに PR を作成する
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Asia/Tokyo"
+    target-branch: "develop"
+    labels:
+      - "ci"
+      - "security"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

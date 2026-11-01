@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-01
+### Added
+- clang-format / clang-tidy / cppcheck による静的解析と CI ジョブ（static-analysis）
+- SECURITY.md（脆弱性の報告方法）と Dependabot による GitHub Actions の自動更新
+- 実行ファイルのハードニング（スタック保護・_FORTIFY_SOURCE・ASLR/DEP・PIE/Full RELRO）と CI での検証
+- gcovr によるカバレッジ計測（目標: 行 95% / 分岐 90%）、CI のジョブサマリー表示、GitHub Pages へのレポートとバッジの公開
+- 未テストだった引き算・割り算・不正な演算子状態・コントローラのクリアのテスト
+
+### Changed
+- 状態を型安全に再設計：`hasOp` / `op` / `stored` を `std::optional<PendingOperation>` に統合し、演算子を `enum class Operator` に変更（矛盾した状態を表現できなくした）
+- エラーを `const char*` から `enum class ErrorCode` に変更し、表示文言への変換を UI 層（`errorMessage`）に分離
+- エラーをモーダルダイアログ（QMessageBox）ではなく表示欄に表示するよう変更
+- GitHub Actions をコミット SHA で固定し、checkout で認証情報を保持しないよう変更
+- 設計図を PlantUML + PNG から Mermaid（README に直接記述）に移行し、v1.1.0 の実装に合わせて更新
+- clang-format によるコードの一括整形
+- clang-tidy の指摘に基づく改善（ラムダのキャプチャの明示、インターフェースのコピー/ムーブ禁止、enum の基底型指定など）
+- CI の clang-format を PyPI の 23.1.3 に固定し、ローカル（MSYS2 の 23.x）と整形結果が一致するよう変更
+
 ## [1.1.0] - 2026-10-28
 ### Added
 - PR・Issue テンプレート、CHANGELOG、.editorconfig
@@ -35,6 +53,7 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/KoichiKurita/CPPlang-Calculator/releases/tag/v1.0.0
