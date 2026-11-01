@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(QtCalculator
-    VERSION 1.4.0
+    VERSION 1.5.0
     LANGUAGES CXX
 )
 
@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(CALC_BUILD_GUI   "Build the Qt GUI application" ON)
 option(CALC_BUILD_TESTS "Build unit tests (GoogleTest)" ON)
 option(CALC_ENABLE_COVERAGE "Instrument code for coverage measurement (GCC)" OFF)
+option(CALC_BUILD_FUZZERS "Build libFuzzer targets (Clang only)" OFF)
 
 # 自分のコードにだけ適用する警告設定（外部ライブラリには適用しない）
 add_library(calc_warnings INTERFACE)
@@ -57,4 +58,11 @@ add_subdirectory(src)
 if(CALC_BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
+endif()
+
+if(CALC_BUILD_FUZZERS)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "CALC_BUILD_FUZZERS requires Clang (libFuzzer)")
+    endif()
+    add_subdirectory(fuzz)
 endif()

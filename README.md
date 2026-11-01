@@ -19,6 +19,7 @@ This project intentionally applies the same architectural philosophy as the [Num
 ## 🎯 Features
 
 - Basic arithmetic operations: `+`, `-`, `*`, `/`
+- **Expression input** with parentheses and operator precedence, e.g. `(1+2)*3` (see [Expression Input](#-expression-input))
 - Decimal input (`.`), sign toggle (`±`), and backspace (`⌫`)
 - Keyboard input (see [Keyboard Shortcuts](#-keyboard-shortcuts))
 - Continuous calculation (e.g. `2 + 3 + 4 = 9`)
@@ -43,6 +44,40 @@ This project intentionally applies the same architectural philosophy as the [Num
 | `Esc` | Clear |
 
 `±` is available as a button.
+
+---
+
+## 🧮 Expression Input
+
+Type an expression in the input field at the top and press `Enter`. The result is shown in the display and can be used in the next calculation.
+
+The evaluator is a **hand-written recursive descent parser** (`src/domain/Expression.h`, Qt-free). No external evaluator (`eval`, shell, scripting engine) is used.
+
+```text
+expression = term , { ("+" | "-") , term } ;
+term       = factor , { ("*" | "/") , factor } ;
+factor     = ("+" | "-") , factor | primary ;
+primary    = number | "(" , expression , ")" ;
+number     = digits , [ "." , [ digits ] ] | "." , digits ;
+```
+
+The input is treated as **untrusted data**:
+
+| Measure | Detail |
+| --- | --- |
+| Length limit | Up to 256 characters (`ExpressionTooLong`) |
+| Nesting limit | Up to 64 nested parentheses / unary operators, preventing stack exhaustion by recursion (`ExpressionTooDeep`) |
+| Character whitelist | Only digits, `.`, `+ - * /`, parentheses and whitespace (`Syntax error at N`) |
+| Arithmetic errors | Division by zero and overflow are reported, never shown as `inf` / `NaN` |
+| Fuzzing | The evaluator is fuzzed with **libFuzzer + ASan + UBSan** in CI |
+
+| Input | Result |
+| --- | --- |
+| `(1+2)*3` | `9` |
+| `2+3*4` | `14` |
+| `-(2+3)` | `-5` |
+| `1/(2-2)` | `Cannot divide by zero` |
+| `2*(3+` | `Syntax error at 6` |
 
 ---
 
@@ -97,6 +132,10 @@ classDiagram
         }
         class CalculatorState
         class CalculatorEvent
+        class Expression {
+            <<recursive descent parser>>
+            +evaluateExpression(string_view) variant
+        }
     }
     ICalculatorUI <|.. QtCalculatorUI
     QtCalculatorUI ..> NumberFormat
@@ -107,6 +146,7 @@ classDiagram
     CalculatorController ..> CalculatorLogic
     CalculatorLogic ..> CalculatorState
     CalculatorLogic ..> CalculatorEvent
+    CalculatorLogic ..> Expression
 ```
 
 - The **Domain** and **Application** layers have zero dependency on Qt.
@@ -154,6 +194,9 @@ classDiagram
         DivisionByZero
         Overflow
         InvalidDigit
+        InvalidExpression
+        ExpressionTooLong
+        ExpressionTooDeep
     }
     class CalculatorEvent {
         <<variant>>
@@ -164,6 +207,7 @@ classDiagram
     }
     class Error {
         +ErrorCode code
+        +size_t position
     }
     class CalculatorLogic {
         <<pure functions>>
@@ -172,6 +216,7 @@ classDiagram
         +toggleSign(state) pair
         +backspace(state) pair
         +inputOperator(state, op) pair
+        +evaluateExpressionInput(state, text) pair
         +calculate(state) pair
         +clearAll() pair
     }
@@ -245,7 +290,8 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 | `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0`, `0.1 + 0.2` shown as `0.3` |
 | `ErrorMessageTest` | UI (Qt-free) | A message for every `ErrorCode` |
 | `KeyInputTest` | UI (Qt-free) | Mapping of keyboard characters to `Input` |
-| `QtCalculatorUITest` | UI (Qt, offscreen) | Real Qt widgets driven with **QTest**: button clicks, keyboard input, display of decimals and errors |
+| `ExpressionTest` | Domain | Precedence, associativity, parentheses, unary operators, syntax errors with positions, length / nesting limits, overflow |
+| `QtCalculatorUITest` | UI (Qt, offscreen) | Real Qt widgets driven with **QTest**: button clicks, keyboard input, expression input, display of decimals and errors |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
 
@@ -253,6 +299,19 @@ Because the domain and application layers are Qt-free, tests can be built **with
 cmake -S . -B build-noqt -DCALC_BUILD_GUI=OFF
 cmake --build build-noqt
 ctest --test-dir build-noqt --output-on-failure
+```
+
+### Fuzzing
+
+The expression evaluator is fuzzed with **libFuzzer** (`fuzz/ExpressionFuzzer.cpp`) together with AddressSanitizer and UndefinedBehaviorSanitizer.
+The fuzzer also checks invariants: a successful result is always finite, and an error position never exceeds the input limit.
+
+```bash
+# Clang is required
+cmake -S . -B build-fuzz -DCALC_BUILD_GUI=OFF -DCALC_BUILD_TESTS=OFF -DCALC_BUILD_FUZZERS=ON -DCMAKE_CXX_COMPILER=clang++
+cmake --build build-fuzz
+mkdir -p corpus
+./build-fuzz/fuzz/ExpressionFuzzer corpus fuzz/corpus -dict=fuzz/expression.dict -max_len=512 -max_total_time=60
 ```
 
 ### Coverage
@@ -281,6 +340,7 @@ ctest --test-dir build-cov
 | Area | Measure |
 | --- | --- |
 | Input validation | Digits (0–9) and operators (`+ - * /`) are validated in the domain layer |
+| Expression input | Treated as untrusted: length / nesting limits, character whitelist, no external evaluator; fuzzed with libFuzzer |
 | Numeric safety | Input limited to 15 digits; `inf` / `NaN` results are reported as `Overflow` |
 | Memory safety | Linux CI runs all tests with **AddressSanitizer** and **UndefinedBehaviorSanitizer** |
 | Compiler warnings | `-Wall -Wextra -Wpedantic` (`/W4` on MSVC) applied to project targets |
@@ -303,6 +363,7 @@ CPPlang-Calculator/
 │  ├─ ui/            # Qt UI + Qt-free number formatter
 │  └─ main.cpp
 ├─ test/             # GoogleTest unit tests + QTest GUI tests
+├─ fuzz/             # libFuzzer target, seed corpus and dictionary
 ├─ packaging/linux/  # Desktop entry and icon for the AppImage
 ├─ .github/
 │  ├─ workflows/ci.yml
@@ -371,6 +432,7 @@ open ./build/src/QtCalculator.app                          # macOS
 | `CALC_BUILD_GUI` | `ON` | Build the Qt GUI application |
 | `CALC_BUILD_TESTS` | `ON` | Build unit tests |
 | `CALC_ENABLE_COVERAGE` | `OFF` | Instrument code for coverage measurement (GCC) |
+| `CALC_BUILD_FUZZERS` | `OFF` | Build libFuzzer targets (Clang only) |
 
 ### Code Style & Static Analysis
 
@@ -429,6 +491,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | `coverage` | Ubuntu | Coverage with gcovr (fails below 95% lines / 90% branches); report in job summary |
 | `deploy-coverage` | Ubuntu | On push to `main`: publishes the HTML coverage report and badge to GitHub Pages |
 | `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, ASLR / DEP verification, packaging with `windeployqt` + dependent DLLs, SHA256 |
+| `fuzz` | Ubuntu 24.04 | libFuzzer + ASan + UBSan on the expression evaluator for 60 seconds; crash inputs are uploaded |
 | `linux-gui` | Ubuntu 24.04 | GUI build, unit + GUI tests, AppImage via linuxdeploy (tools pinned and SHA256-verified), smoke test |
 | `macos` | macOS 15 (Apple Silicon) | GUI build, unit + GUI tests, `.app` via macdeployqt (ad-hoc signed), `.dmg`, smoke test |
 | `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the packages for all three OSes and their checksums |
@@ -449,7 +512,7 @@ git push origin v1.4.0
 - Short-lived topic branches (`fix/`, `test/`, `ci/`, `docs/`, `chore/`) are merged into `develop` via pull requests
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Changes are recorded in [CHANGELOG.md](CHANGELOG.md)
-- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `coverage`, `windows-build`, `linux-gui`, `macos`)
+- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `coverage`, `fuzz`, `windows-build`, `linux-gui`, `macos`)
 
 ---
 
@@ -482,6 +545,7 @@ This calculator shares the same architectural philosophy as the [Number Guess Ga
    - Type-safe state (`PendingOperation`, `Operator`, `ErrorCode`); errors shown in the display
 7. **v1.3.0 — Features**: decimal input, sign toggle, backspace, keyboard input
 8. **v1.4.0 — Multi-platform**: Linux (AppImage) and macOS (.dmg) builds and releases, QTest GUI tests
+9. **v1.5.0 — Expression input**: hand-written recursive descent parser with resource limits, fuzzed with libFuzzer
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

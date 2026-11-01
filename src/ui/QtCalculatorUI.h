@@ -17,6 +17,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
+    QLineEdit* expressionInput_; // 式の入力欄（例: (1+2)*3）
     QLineEdit* display_;
     std::function<void(Input)> handler_;
 

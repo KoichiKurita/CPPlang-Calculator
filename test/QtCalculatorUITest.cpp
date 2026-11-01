@@ -21,6 +21,17 @@ protected:
         return ui_.findChild<QLineEdit*>("display")->text().toStdString();
     }
 
+    QLineEdit* expressionInput() const { return ui_.findChild<QLineEdit*>("expression"); }
+
+    // 式の入力欄にフォーカスを移して入力し、Enter を押す
+    void enterExpression(const char* text) {
+        ui_.activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&ui_));
+        expressionInput()->setFocus();
+        QTest::keyClicks(expressionInput(), text);
+        QTest::keyClick(expressionInput(), Qt::Key_Return);
+    }
+
     // ラベルでボタンを探してクリックする
     void click(const char* label) {
         const QString text = QString::fromUtf8(label);
@@ -80,6 +91,29 @@ TEST_F(QtCalculatorUITest, ErrorIsShownInDisplay) {
     QTest::keyClicks(&ui_, "5/0=");
 
     EXPECT_EQ(display(), "Cannot divide by zero");
+}
+
+TEST_F(QtCalculatorUITest, ExpressionIsEvaluatedWithEnter) {
+    enterExpression("(1+2)*3");
+
+    // Enter が電卓の「=」として扱われていれば "No operation" になってしまう
+    EXPECT_EQ(display(), "9");
+}
+
+TEST_F(QtCalculatorUITest, ExpressionSyntaxErrorShowsPosition) {
+    enterExpression("1+");
+
+    EXPECT_EQ(display(), "Syntax error at 3");
+}
+
+TEST_F(QtCalculatorUITest, EscapeInExpressionInputClearsIt) {
+    enterExpression("12");
+    QTest::keyClick(expressionInput(), Qt::Key_Escape);
+    EXPECT_TRUE(expressionInput()->text().isEmpty());
+
+    // フォーカスがウィンドウに戻り、キーボードでボタン電卓を操作できる
+    QTest::keyClicks(&ui_, "7");
+    EXPECT_EQ(display(), "7");
 }
 
 int main(int argc, char** argv) {
