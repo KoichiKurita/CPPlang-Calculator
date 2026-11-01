@@ -14,6 +14,7 @@ add_executable(CalculatorLogicTest
     CalculatorControllerTest.cpp
     NumberFormatTest.cpp
     ErrorMessageTest.cpp
+    KeyInputTest.cpp
 )
 target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings calc_hardening calc_coverage)
 

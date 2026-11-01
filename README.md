@@ -18,13 +18,30 @@ This project intentionally applies the same architectural philosophy as the [Num
 ## 🎯 Features
 
 - Basic arithmetic operations: `+`, `-`, `*`, `/`
+- Decimal input (`.`), sign toggle (`±`), and backspace (`⌫`)
+- Keyboard input (see [Keyboard Shortcuts](#-keyboard-shortcuts))
 - Continuous calculation (e.g. `2 + 3 + 4 = 9`)
 - Operator replacement on repeated input (e.g. `2 + * 3 = 6`)
 - Clear (`C`) button
 - Error handling: division by zero, overflow, invalid input — shown in the display (no modal dialogs)
-- Up to 15 significant digits displayed without exponential notation
+- Up to 15 significant digits displayed without exponential notation (e.g. `0.1 + 0.2` is shown as `0.3`)
 - Event-driven Qt UI
 - Domain logic completely decoupled from UI
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Key | Action |
+| --- | --- |
+| `0`–`9` | Digit |
+| `.` | Decimal point |
+| `+` `-` `*` `/` | Operator |
+| `Enter` / `=` | Calculate |
+| `Backspace` | Delete last character |
+| `Esc` | Clear |
+
+`±` is available as a button.
 
 ---
 
@@ -60,6 +77,10 @@ classDiagram
             <<Qt-free>>
             +errorMessage(ErrorCode) string
         }
+        class KeyInput {
+            <<Qt-free>>
+            +inputFromChar(char) optional~Input~
+        }
     }
     namespace Application {
         class CalculatorController {
@@ -79,6 +100,7 @@ classDiagram
     ICalculatorUI <|.. QtCalculatorUI
     QtCalculatorUI ..> NumberFormat
     QtCalculatorUI ..> ErrorMessage
+    QtCalculatorUI ..> KeyInput
     CalculatorController --> ICalculatorUI
     CalculatorController *-- CalculatorState : owns
     CalculatorController ..> CalculatorLogic
@@ -88,7 +110,7 @@ classDiagram
 
 - The **Domain** and **Application** layers have zero dependency on Qt.
 - The Controller **owns the calculator state** for its entire lifetime.
-- Display formatting (`formatNumber`) and error messages (`errorMessage`) are Qt-free pure functions, so they are unit-tested as well.
+- Display formatting (`formatNumber`), error messages (`errorMessage`) and key mapping (`inputFromChar`) are Qt-free pure functions, so they are unit-tested as well.
 
 ---
 
@@ -100,7 +122,7 @@ The domain consists of:
 - `Operator` / `ErrorCode` (`enum class`)
 - `CalculatorEvent` (`std::variant<DisplayUpdated, Error>`)
 - Pure functions:
-  - `inputDigit`
+  - `inputDigit`, `inputDecimalPoint`, `toggleSign`, `backspace`
   - `inputOperator`
   - `calculate`
   - `clearAll`
@@ -112,7 +134,7 @@ classDiagram
     class CalculatorState {
         +double current
         +optional~PendingOperation~ pending
-        +bool enteringNumber
+        +string entry
     }
     class PendingOperation {
         +double lhs
@@ -137,6 +159,7 @@ classDiagram
     }
     class DisplayUpdated {
         +double value
+        +string entry
     }
     class Error {
         +ErrorCode code
@@ -144,6 +167,9 @@ classDiagram
     class CalculatorLogic {
         <<pure functions>>
         +inputDigit(state, digit) pair
+        +inputDecimalPoint(state) pair
+        +toggleSign(state) pair
+        +backspace(state) pair
         +inputOperator(state, op) pair
         +calculate(state) pair
         +clearAll() pair
@@ -163,6 +189,7 @@ classDiagram
 - No framework dependencies
 - Deterministic state transitions
 - Every input is validated; errors are returned as events, never swallowed
+- The number being typed is kept as a **string** (`entry`), so input such as `0.` or `1.50` is displayed exactly as typed and no floating-point error accumulates during input
 - **Invalid states are unrepresentable**: the left operand and operator exist only together (`std::optional<PendingOperation>`), and operators / errors are `enum class` values instead of `char` / strings
 
 ---
@@ -171,7 +198,7 @@ classDiagram
 
 When a button is pressed:
 
-1. UI emits `Input`
+1. UI emits `Input` (button click or key press)
 2. Controller invokes domain function with the current state
 3. Domain returns `(newState, Event)`
 4. Controller stores `newState` and UI updates display
@@ -187,12 +214,12 @@ sequenceDiagram
     participant F as formatNumber / errorMessage
     User->>UI: press button
     UI->>C: Input
-    C->>D: inputDigit / inputOperator / calculate / clearAll
+    C->>D: inputDigit / inputDecimalPoint / toggleSign / backspace / inputOperator / calculate / clearAll
     D-->>C: (newState, event)
     C->>C: state_ = newState
     C->>UI: handleEvent(event)
     alt DisplayUpdated
-        UI->>F: formatNumber(value)
+        UI->>F: formatNumber(value) (or show entry as typed)
         F-->>UI: "1234567"
         UI-->>User: update display
     else Error
@@ -212,10 +239,11 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 
 | Test suite | Target | What it verifies |
 | --- | --- | --- |
-| `CalculatorLogicTest` | Domain | Four arithmetic operations, continuous calculation, operator replacement, error codes and propagation, input validation, digit limit, overflow |
-| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear, error replaced by next input (uses a Qt-free `FakeUI`) |
-| `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0` |
+| `CalculatorLogicTest` | Domain | Four arithmetic operations, continuous calculation, operator replacement, decimal input, sign toggle, backspace, error codes and propagation, input validation, digit limit, overflow |
+| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear, error replaced by next input, `12.5 * -2 = -25`, backspace (uses a Qt-free `FakeUI`) |
+| `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0`, `0.1 + 0.2` shown as `0.3` |
 | `ErrorMessageTest` | UI (Qt-free) | A message for every `ErrorCode` |
+| `KeyInputTest` | UI (Qt-free) | Mapping of keyboard characters to `Input` |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
 

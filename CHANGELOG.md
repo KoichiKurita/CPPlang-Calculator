@@ -5,6 +5,14 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+### Added
+- 小数点（.）・符号反転（±）・バックスペース（⌫）
+- キーボード入力（0-9 . + - * / Enter(=) Esc(C) Backspace）。キーの変換は Qt 非依存の `inputFromChar` に分離
+- 小数・符号反転・バックスペース・キーボード変換のユニットテスト
+
+### Changed
+- 入力中の数値を文字列（`entry`）で保持し、"0." や "1.50" を入力どおりに表示するよう変更（`enteringNumber` を置き換え）
+- ボタン配置を一般的な電卓の配置（C ⌫ ± / ・ 7 8 9 * ・ … ・ 0 . =）に変更
 
 ## [1.2.0] - 2026-11-01
 ### Added
