@@ -17,16 +17,6 @@ void CalculatorController::run() {
 }
 
 void CalculatorController::handle(const Input& input) {
-    // 履歴の操作は計算の状態とは別に扱う
-    if (input.type == InputType::UseHistory) {
-        useHistory(input.value);
-        return;
-    }
-    if (input.type == InputType::ClearHistory) {
-        clearHistory();
-        return;
-    }
-
     // 初期値は「何も変えない」。switch で InputType の全ての値を扱う
     std::pair<CalculatorState, CalculatorEvent> result{state_, DisplayUpdated{state_.current}};
 
@@ -41,8 +31,9 @@ void CalculatorController::handle(const Input& input) {
         case InputType::Expression:
             result = evaluateExpressionInput(state_, input.expression);
             break;
-        case InputType::UseHistory:
-        case InputType::ClearHistory: break; // 上で処理済み
+        // 履歴の操作は計算の状態を変えないため、ここで処理して終わる
+        case InputType::UseHistory:   useHistory(input.value); return;
+        case InputType::ClearHistory: clearHistory(); return;
     }
 
     const CalculatorState before = state_;

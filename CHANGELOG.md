@@ -5,6 +5,10 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+### Changed
+- カバレッジ計測で、閉じ括弧などコードでない行を対象外にする（gcovr の `--exclude-noncode-lines`）
+- コントローラの履歴操作を switch の中で扱い、到達しない case をなくした
+- 字句解析で、数値トークンの追加を1行ずつに分けた（GCC のカバレッジ計測で行が正しく数えられるように）
 
 ## [1.6.0] - 2026-11-01
 ### Added

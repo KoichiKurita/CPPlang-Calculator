@@ -372,7 +372,7 @@ cmake --build build-cov
 find build-cov -name '*.gcda' -delete
 ctest --test-dir build-cov
 ~/.venv-gcovr/bin/gcovr --root . --filter 'src/' --object-directory build-cov \
-  --exclude-unreachable-branches --exclude-throw-branches --print-summary
+  --exclude-unreachable-branches --exclude-throw-branches --exclude-noncode-lines --print-summary
 ```
 
 ---
