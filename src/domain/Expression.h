@@ -91,8 +91,8 @@ inline std::variant<std::vector<Token>, Error> tokenize(std::string_view input) 
             if (dots > 1 || digits == 0) {
                 return syntaxError(start);
             }
-            tokens.push_back(
-                {TokenKind::Number, parseNumber(input.substr(start, i - start)), start});
+            const double value = parseNumber(input.substr(start, i - start));
+            tokens.push_back({TokenKind::Number, value, start});
             continue;
         }
 

@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-11-01
+### Changed
+- カバレッジ計測で、閉じ括弧などコードでない行を対象外にする（gcovr の `--exclude-noncode-lines`）
+- コントローラの履歴操作を switch の中で扱い、到達しない case をなくした
+- 字句解析で、数値トークンの追加を1行ずつに分けた（GCC のカバレッジ計測で行が正しく数えられるように）
+
 ## [1.6.0] - 2026-11-01
 ### Added
 - 計算履歴（「式 = 結果」を新しい順に表示、最大 100 件）。クリックで結果を再利用、履歴のクリア
@@ -100,7 +106,8 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.3.0...v1.4.0
