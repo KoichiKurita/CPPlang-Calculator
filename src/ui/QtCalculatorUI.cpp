@@ -15,6 +15,7 @@ QtCalculatorUI::QtCalculatorUI() {
     display_->setAlignment(Qt::AlignRight);
     display_->setMinimumHeight(30);
     display_->setFocusPolicy(Qt::NoFocus);
+    display_->setObjectName("display"); // GUI テストから参照するための名前
 
     auto* mainLayout = new QVBoxLayout;
     mainLayout->addWidget(display_);

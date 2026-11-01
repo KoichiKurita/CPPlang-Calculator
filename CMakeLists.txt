@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(QtCalculator
-    VERSION 1.3.0
+    VERSION 1.4.0
     LANGUAGES CXX
 )
 
@@ -34,11 +34,12 @@ if(NOT MSVC)
         # ASLR（アドレス空間配置のランダム化）と DEP（データ領域の実行禁止）を明示
         target_link_options(calc_hardening INTERFACE
             -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va)
-    else()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # 位置独立実行形式（PIE）と、再配置後の GOT を読み取り専用にする（Full RELRO）
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         target_link_options(calc_hardening INTERFACE -pie -Wl,-z,relro -Wl,-z,now)
     endif()
+    # macOS は PIE が既定で、Apple のリンカは -z relro / -z now に対応しないため追加しない
 endif()
 
 # カバレッジ計測（gcov）。自分のターゲットにだけ適用する
