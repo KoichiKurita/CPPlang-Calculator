@@ -6,7 +6,7 @@ CalculatorController::CalculatorController(ICalculatorUI& ui) : ui_(ui) {}
 void CalculatorController::run() {
     // ローカル変数を参照キャプチャすると run() 終了後にダングリング参照になるため、
     // this をキャプチャしてメンバの state_ を使う
-    ui_.onInput([this](Input input) { handle(input); });
+    ui_.onInput([this](const Input& input) { handle(input); });
 }
 
 void CalculatorController::handle(const Input& input) {
@@ -21,6 +21,9 @@ void CalculatorController::handle(const Input& input) {
         case InputType::DecimalPoint: result = inputDecimalPoint(state_); break;
         case InputType::ToggleSign:   result = toggleSign(state_); break;
         case InputType::Backspace:    result = backspace(state_); break;
+        case InputType::Expression:
+            result = evaluateExpressionInput(state_, input.expression);
+            break;
     }
 
     state_ = result.first;

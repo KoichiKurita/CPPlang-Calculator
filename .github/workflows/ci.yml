@@ -61,7 +61,7 @@ jobs:
       # 整形した結果に差分があれば失敗（差分をログに表示）
       - name: clang-format (check)
         run: |
-          git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' | xargs clang-format -i
+          git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' 'fuzz/*.cpp' | xargs clang-format -i
           git diff --exit-code
 
       # clang-tidy はコンパイルオプションを compile_commands.json から読む
@@ -81,7 +81,7 @@ jobs:
           --std=c++17 --language=c++ -I src --library=qt
           --inline-suppr --suppress=missingIncludeSystem
           --error-exitcode=1
-          src test
+          src test fuzz
   
         # ---- カバレッジ計測（gcovr）：目標未達で失敗。main への push 時は GitHub Pages に公開 ----
   coverage:
@@ -161,6 +161,41 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # ---- ファジング：式の評価器にランダムな入力を与え、クラッシュしないことを確かめる ----
+  fuzz:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
+
+      - name: Install libFuzzer runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-18 libclang-rt-18-dev
+
+      - name: Configure and Build (libFuzzer + ASan + UBSan)
+        run: |
+          cmake -S . -B build -DCALC_BUILD_GUI=OFF -DCALC_BUILD_TESTS=OFF -DCALC_BUILD_FUZZERS=ON \
+            -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --parallel
+
+      # 長さの上限（256 文字）を超える入力も試すため -max_len は上限より大きくする
+      - name: Fuzz (60 seconds)
+        run: |
+          mkdir -p corpus
+          ./build/fuzz/ExpressionFuzzer corpus fuzz/corpus \
+            -dict=fuzz/expression.dict -max_len=512 -max_total_time=60 -print_final_stats=1
+
+      # クラッシュした場合は、再現用の入力（crash-*）を保存する
+      - name: Upload crash inputs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-crashes
+          path: crash-*
 
   # ---- Linux：GUI ビルド + テスト（GUI テスト含む）+ AppImage 作成 ----
   linux-gui:
@@ -350,7 +385,7 @@ jobs:
   # ---- タグ push 時のみ Release を作成（両ジョブの成功が条件）----
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ linux-test, static-analysis, coverage, windows-build, linux-gui, macos ]
+    needs: [ linux-test, static-analysis, coverage, fuzz, windows-build, linux-gui, macos ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
