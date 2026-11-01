@@ -5,6 +5,8 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+
+## [1.6.0] - 2026-11-01
 ### Added
 - 計算履歴（「式 = 結果」を新しい順に表示、最大 100 件）。クリックで結果を再利用、履歴のクリア
 - QSettings による履歴の保存と復元（変更のたびに保存）。保存処理は `IHistoryStore` で抽象化し、`QtHistoryStore` で実装
@@ -13,6 +15,8 @@
 
 ### Changed
 - `formatNumber`（NumberFormat.h）を、履歴の式の文字列化でも使うため UI 層からドメイン層へ移動
+
+## [1.5.0] - 2026-11-01
 ### Added
 - 式の入力欄（例: `(1+2)*3`）と、自作の再帰下降パーサーによる評価（演算子の優先順位・左結合・単項演算子・括弧）
 - 式のエラーの種類（`InvalidExpression` / `ExpressionTooLong` / `ExpressionTooDeep`）と位置の表示（例: `Syntax error at 6`）
@@ -22,8 +26,6 @@
 
 ### Changed
 - ウィンドウの大きさを中身に合わせて固定するよう変更
-
-## [1.5.0] - 2026-11-01
 
 ## [1.4.0] - 2026-11-01
 ### Added
@@ -98,7 +100,8 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...v1.3.0
