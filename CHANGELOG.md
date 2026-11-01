@@ -6,6 +6,20 @@
 
 ## [Unreleased]
 ### Added
+- Linux（Ubuntu 24.04）・macOS（Apple Silicon）での GUI ビルドとテストの CI ジョブ（linux-gui / macos）
+- Linux 向け AppImage（linuxdeploy。ツールは版を固定し SHA256 で検証）と macOS 向け .dmg（macdeployqt・アドホック署名）の作成と、Release への添付
+- QTest による GUI テスト（ボタン・キーボード入力・小数とエラーの表示）
+- 配布物の起動確認用の `--smoke-test` オプション
+- アプリのアイコンとデスクトップエントリ（Linux）
+
+### Changed
+- Full RELRO（`-z relro -z now`）のリンクオプションを Linux のみに適用（macOS のリンカは非対応のため）
+
+### Fixed
+- CHANGELOG で v1.3.0 の変更点が [Unreleased] に残っていた記載ミス
+
+## [1.3.0] - 2026-11-01
+### Added
 - 小数点（.）・符号反転（±）・バックスペース（⌫）
 - キーボード入力（0-9 . + - * / Enter(=) Esc(C) Backspace）。キーの変換は Qt 非依存の `inputFromChar` に分離
 - 小数・符号反転・バックスペース・キーボード変換のユニットテスト
@@ -13,11 +27,8 @@
 ### Changed
 - 入力中の数値を文字列（`entry`）で保持し、"0." や "1.50" を入力どおりに表示するよう変更（`enteringNumber` を置き換え）
 - ボタン配置を一般的な電卓の配置（C ⌫ ± / ・ 7 8 9 * ・ … ・ 0 . =）に変更
-
-## [1.3.0] - 2026-11-01
-### Changed
-  - GitHub Actions を最新のメジャーバージョンに更新（Dependabot：checkout v7・upload-artifact v7・download-artifact v8・action-gh-release v3）
-  - `.h` ファイルを GitHub の言語統計で C++ として扱うよう設定
+- GitHub Actions を最新のメジャーバージョンに更新（Dependabot：checkout v7・upload-artifact v7・download-artifact v8・action-gh-release v3）
+- `.h` ファイルを GitHub の言語統計で C++ として扱うよう設定
 
 ## [1.2.0] - 2026-11-01
 ### Added

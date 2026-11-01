@@ -24,8 +24,15 @@ if(CALC_BUILD_GUI)
     target_link_libraries(ui PUBLIC Qt6::Widgets domain PRIVATE calc_warnings calc_hardening calc_coverage)
     target_include_directories(ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-    add_executable(QtCalculator WIN32
+    # WIN32: Windows でコンソール窓を出さない / MACOSX_BUNDLE: macOS で .app バンドルを作る
+    add_executable(QtCalculator WIN32 MACOSX_BUNDLE
         main.cpp
     )
     target_link_libraries(QtCalculator PRIVATE Qt6::Widgets app ui calc_warnings calc_hardening calc_coverage)
+    set_target_properties(QtCalculator PROPERTIES
+        MACOSX_BUNDLE_BUNDLE_NAME "QtCalculator"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.koichikurita.qtcalculator"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    )
 endif()
