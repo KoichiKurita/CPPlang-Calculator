@@ -205,8 +205,12 @@ ctest --test-dir build-noqt --output-on-failure
 | Numeric safety | Input limited to 15 digits; `inf` / `NaN` results are reported as `Overflow` |
 | Memory safety | Linux CI runs all tests with **AddressSanitizer** and **UndefinedBehaviorSanitizer** |
 | Compiler warnings | `-Wall -Wextra -Wpedantic` (`/W4` on MSVC) applied to project targets |
-| Supply chain | GoogleTest pinned by commit hash; release zip published with **SHA256 checksum** |
-| CI permissions | Least privilege (`contents: read`); write permission only for the release job |
+| Supply chain | GoogleTest and all GitHub Actions pinned by commit SHA; Actions kept up to date by **Dependabot**; release zip published with **SHA256 checksum** |
+| Binary hardening | Stack protector, `_FORTIFY_SOURCE=2`, `_GLIBCXX_ASSERTIONS`; ASLR / DEP on Windows (verified in CI), PIE / Full RELRO on Linux |
+| Vulnerability reporting | Private vulnerability reporting via GitHub (see [SECURITY.md](SECURITY.md)) |
+| CI permissions | Least privilege (`contents: read`); write permission only for the release job; checkout without persisted credentials |
+| Code style | `clang-format` (`.clang-format`), checked in CI |
+| Static analysis | `clang-tidy` (`.clang-tidy`) and `cppcheck`; findings are treated as errors |
 
 ---
 
@@ -222,9 +226,11 @@ CPPlang-Calculator/
 ├─ test/             # GoogleTest unit tests
 ├─ .github/
 │  ├─ workflows/ci.yml
+│  ├─ dependabot.yml
 │  ├─ ISSUE_TEMPLATE/
 │  └─ pull_request_template.md
 ├─ CHANGELOG.md
+├─ SECURITY.md
 └─ LICENSE
 ```
 
@@ -266,6 +272,20 @@ ctest --test-dir build --output-on-failure
 | `CALC_BUILD_GUI` | `ON` | Build the Qt GUI application |
 | `CALC_BUILD_TESTS` | `ON` | Build unit tests |
 
+### Code Style & Static Analysis
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-clang-tools-extra mingw-w64-ucrt-x86_64-cppcheck
+
+# Format
+git ls-files 'src/*.cpp' 'src/*.h' 'test/*.cpp' | xargs clang-format -i
+
+# cppcheck
+cppcheck --enable=warning,style,performance,portability --std=c++17 --language=c++ \
+  -I src --library=qt --inline-suppr --suppress=missingIncludeSystem src test
+```
+
+clang-tidy runs in CI (`static-analysis` job).
 ---
 
 ## 📦 Download
@@ -289,8 +309,9 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | Job | Runner | Description |
 | --- | --- | --- |
 | `linux-test` | Ubuntu | Qt-free build, all tests with ASan / UBSan |
-| `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, packaging with `windeployqt` + dependent DLLs, SHA256 |
+| `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, ASLR / DEP verification, packaging with `windeployqt` + dependent DLLs, SHA256 |
 | `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the zip and checksum |
+| `static-analysis` | Ubuntu | clang-format check, clang-tidy, cppcheck |
 
 Release example:
 
@@ -308,6 +329,7 @@ git push origin v1.1.0
 - Branch rulesets require pull requests and passing CI (`linux-test`, `windows-build`)
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Changes are recorded in [CHANGELOG.md](CHANGELOG.md)
+- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `windows-build`)
 
 ---
 

@@ -6,7 +6,7 @@ target_include_directories(domain INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 add_library(app
     app/CalculatorController.cpp
 )
-target_link_libraries(app PUBLIC domain PRIVATE calc_warnings)
+target_link_libraries(app PUBLIC domain PRIVATE calc_warnings calc_hardening)
 target_include_directories(app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # ---- UI / 実行ファイル（Qtが必要な部分だけ）----
@@ -21,11 +21,11 @@ if(CALC_BUILD_GUI)
         ui/QtCalculatorUI.cpp
         ui/QtCalculatorUI.h
     )
-    target_link_libraries(ui PUBLIC Qt6::Widgets domain PRIVATE calc_warnings)
+    target_link_libraries(ui PUBLIC Qt6::Widgets domain PRIVATE calc_warnings calc_hardening)
     target_include_directories(ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     add_executable(QtCalculator WIN32
         main.cpp
     )
-    target_link_libraries(QtCalculator PRIVATE Qt6::Widgets app ui calc_warnings)
+    target_link_libraries(QtCalculator PRIVATE Qt6::Widgets app ui calc_warnings calc_hardening)
 endif()
