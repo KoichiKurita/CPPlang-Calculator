@@ -20,6 +20,7 @@ This project intentionally applies the same architectural philosophy as the [Num
 
 - Basic arithmetic operations: `+`, `-`, `*`, `/`
 - **Expression input** with parentheses and operator precedence, e.g. `(1+2)*3` (see [Expression Input](#-expression-input))
+- **Calculation history** that is saved across restarts; click an entry to reuse its result (see [Calculation History](#-calculation-history))
 - Decimal input (`.`), sign toggle (`±`), and backspace (`⌫`)
 - Keyboard input (see [Keyboard Shortcuts](#-keyboard-shortcuts))
 - Continuous calculation (e.g. `2 + 3 + 4 = 9`)
@@ -81,6 +82,27 @@ The input is treated as **untrusted data**:
 
 ---
 
+## 📜 Calculation History
+
+Every successful calculation (`=` and expression input) is recorded as `expression = result` and shown in the list on the right, newest first.
+Click an entry to reuse its result in the next calculation. Up to 100 entries are kept.
+
+The history is saved with **QSettings** each time it changes, so it survives restarts:
+
+| OS | Location |
+| --- | --- |
+| Windows | Registry: `HKEY_CURRENT_USER\Software\KoichiKurita\QtCalculator` |
+| macOS | `~/Library/Preferences/com.koichikurita.QtCalculator.plist` |
+| Linux | `~/.config/KoichiKurita/QtCalculator.conf` |
+
+Saved data is treated as **untrusted** (it can be edited by hand): the stored count is not trusted beyond the 100-entry limit,
+and entries with non-numeric or non-finite results or invalid expressions are skipped when loading.
+
+Persistence is abstracted behind `IHistoryStore` (application layer), so the controller is tested with an in-memory fake,
+and the QSettings implementation (`QtHistoryStore`) is tested with a temporary file.
+
+---
+
 ## 🏗 Architecture
 
 The project follows a layered architecture:
@@ -103,11 +125,12 @@ classDiagram
             <<interface>>
             +onInput(handler)
             +handleEvent(event)
+            +showHistory(entries)
         }
         class QtCalculatorUI
-        class NumberFormat {
-            <<Qt-free>>
-            +formatNumber(double) string
+        class QtHistoryStore {
+            +load() vector~HistoryEntry~
+            +save(entries)
         }
         class ErrorMessage {
             <<Qt-free>>
@@ -122,8 +145,14 @@ classDiagram
         class CalculatorController {
             -ICalculatorUI ui_
             -CalculatorState state_
+            -History history_
             +run()
             -handle(Input)
+        }
+        class IHistoryStore {
+            <<interface>>
+            +load() vector~HistoryEntry~
+            +save(entries)
         }
     }
     namespace Domain {
@@ -136,6 +165,14 @@ classDiagram
             <<recursive descent parser>>
             +evaluateExpression(string_view) variant
         }
+        class History {
+            +add(HistoryEntry)
+            +restore(entries)
+            +clear()
+        }
+        class NumberFormat {
+            +formatNumber(double) string
+        }
     }
     ICalculatorUI <|.. QtCalculatorUI
     QtCalculatorUI ..> NumberFormat
@@ -143,6 +180,9 @@ classDiagram
     QtCalculatorUI ..> KeyInput
     CalculatorController --> ICalculatorUI
     CalculatorController *-- CalculatorState : owns
+    CalculatorController *-- History : owns
+    CalculatorController --> IHistoryStore
+    IHistoryStore <|.. QtHistoryStore
     CalculatorController ..> CalculatorLogic
     CalculatorLogic ..> CalculatorState
     CalculatorLogic ..> CalculatorEvent
@@ -151,7 +191,7 @@ classDiagram
 
 - The **Domain** and **Application** layers have zero dependency on Qt.
 - The Controller **owns the calculator state** for its entire lifetime.
-- Display formatting (`formatNumber`), error messages (`errorMessage`) and key mapping (`inputFromChar`) are Qt-free pure functions, so they are unit-tested as well.
+- Number formatting (`formatNumber`, domain), error messages (`errorMessage`) and key mapping (`inputFromChar`) are Qt-free pure functions, so they are unit-tested as well.
 
 ---
 
@@ -286,12 +326,14 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 | Test suite | Target | What it verifies |
 | --- | --- | --- |
 | `CalculatorLogicTest` | Domain | Four arithmetic operations, continuous calculation, operator replacement, decimal input, sign toggle, backspace, error codes and propagation, input validation, digit limit, overflow |
-| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear, error replaced by next input, `12.5 * -2 = -25`, backspace (uses a Qt-free `FakeUI`) |
-| `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0`, `0.1 + 0.2` shown as `0.3` |
+| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear, error replaced by next input, `12.5 * -2 = -25`, backspace, expression input, recording / restoring / reusing / clearing history (uses a Qt-free `FakeUI` and an in-memory `FakeHistoryStore`) |
+| `NumberFormatTest` | Domain | 15-digit display, negative numbers, decimals, `-0`, `0.1 + 0.2` shown as `0.3` |
 | `ErrorMessageTest` | UI (Qt-free) | A message for every `ErrorCode` |
 | `KeyInputTest` | UI (Qt-free) | Mapping of keyboard characters to `Input` |
+| `HistoryTest` | Domain | Newest-first order, capacity, rejection of invalid entries, restoring from tampered data |
 | `ExpressionTest` | Domain | Precedence, associativity, parentheses, unary operators, syntax errors with positions, length / nesting limits, overflow |
-| `QtCalculatorUITest` | UI (Qt, offscreen) | Real Qt widgets driven with **QTest**: button clicks, keyboard input, expression input, display of decimals and errors |
+| `QtCalculatorUITest` | UI (Qt, offscreen) | Real Qt widgets driven with **QTest**: button clicks, keyboard input, expression input, history list, display of decimals and errors |
+| `QtHistoryStoreTest` | UI (Qt) | QSettings save / load round trip with a temporary file, skipping tampered values, not trusting the stored count |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
 
@@ -340,6 +382,7 @@ ctest --test-dir build-cov
 | Area | Measure |
 | --- | --- |
 | Input validation | Digits (0–9) and operators (`+ - * /`) are validated in the domain layer |
+| Saved history | Treated as untrusted when loading: count capped at 100, non-numeric / non-finite results and invalid expressions skipped |
 | Expression input | Treated as untrusted: length / nesting limits, character whitelist, no external evaluator; fuzzed with libFuzzer |
 | Numeric safety | Input limited to 15 digits; `inf` / `NaN` results are reported as `Overflow` |
 | Memory safety | Linux CI runs all tests with **AddressSanitizer** and **UndefinedBehaviorSanitizer** |
@@ -546,6 +589,7 @@ This calculator shares the same architectural philosophy as the [Number Guess Ga
 7. **v1.3.0 — Features**: decimal input, sign toggle, backspace, keyboard input
 8. **v1.4.0 — Multi-platform**: Linux (AppImage) and macOS (.dmg) builds and releases, QTest GUI tests
 9. **v1.5.0 — Expression input**: hand-written recursive descent parser with resource limits, fuzzed with libFuzzer
+10. **v1.6.0 — Calculation history**: history list with reuse, persisted with QSettings behind an `IHistoryStore` interface
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

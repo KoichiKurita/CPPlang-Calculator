@@ -1,15 +1,18 @@
 #include "QtCalculatorUI.h"
 #include "../domain/Expression.h"
+#include "../domain/NumberFormat.h"
 #include "ErrorMessage.h"
 #include "KeyInput.h"
-#include "NumberFormat.h"
 
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
 
-QtCalculatorUI::QtCalculatorUI() : expressionInput_(new QLineEdit), display_(new QLineEdit("0")) {
+QtCalculatorUI::QtCalculatorUI()
+    : expressionInput_(new QLineEdit), display_(new QLineEdit("0")), historyList_(new QListWidget) {
     // 式の入力欄。Enter で評価し、結果を表示欄に出す
     expressionInput_->setObjectName("expression"); // GUI テストから参照するための名前
     expressionInput_->setPlaceholderText("Expression, e.g. (1+2)*3  [Enter]");
@@ -67,11 +70,34 @@ QtCalculatorUI::QtCalculatorUI() : expressionInput_(new QLineEdit), display_(new
     addButton("=", {InputType::Equal}, 4, 3);
 
     mainLayout->addLayout(grid);
-    setLayout(mainLayout);
+
+    // 計算履歴（右側）。クリックするとその結果を続けて計算に使える
+    historyList_->setObjectName("history"); // GUI テストから参照するための名前
+    historyList_->setFixedWidth(220);
+    // フォーカスを取らせない（リストがキー入力を奪うとキーボードで計算できなくなるため）
+    historyList_->setFocusPolicy(Qt::NoFocus);
+    connect(historyList_, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        emitInput({InputType::UseHistory, historyList_->row(item)});
+    });
+
+    auto* clearHistory = new QPushButton("Clear history");
+    clearHistory->setFocusPolicy(Qt::NoFocus);
+    connect(clearHistory, &QPushButton::clicked, this,
+            [this] { emitInput({InputType::ClearHistory}); });
+
+    auto* historyLayout = new QVBoxLayout;
+    historyLayout->addWidget(new QLabel("History"));
+    historyLayout->addWidget(historyList_);
+    historyLayout->addWidget(clearHistory);
+
+    auto* rootLayout = new QHBoxLayout;
+    rootLayout->addLayout(mainLayout);
+    rootLayout->addLayout(historyLayout);
+    setLayout(rootLayout);
     setWindowTitle("QtCalculator");
     // ウィンドウの大きさを中身に合わせて固定する（固定値だと部品の間に余白ができるため）
-    setMinimumWidth(300);
     mainLayout->setSizeConstraint(QLayout::SetFixedSize);
+    rootLayout->setSizeConstraint(QLayout::SetFixedSize);
 
     // キーボード入力を受け付ける
     setFocusPolicy(Qt::StrongFocus);
@@ -96,6 +122,14 @@ void QtCalculatorUI::handleEvent(const CalculatorEvent& event) {
             }
         },
         event);
+}
+
+void QtCalculatorUI::showHistory(const std::vector<HistoryEntry>& entries) {
+    historyList_->clear();
+    for (const auto& entry : entries) {
+        historyList_->addItem(
+            QString::fromStdString(entry.expression + " = " + formatNumber(entry.result)));
+    }
 }
 
 void QtCalculatorUI::keyPressEvent(QKeyEvent* event) {

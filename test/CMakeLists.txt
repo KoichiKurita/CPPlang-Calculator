@@ -16,6 +16,7 @@ add_executable(CalculatorLogicTest
     ErrorMessageTest.cpp
     KeyInputTest.cpp
     ExpressionTest.cpp
+    HistoryTest.cpp
 )
 target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings calc_hardening calc_coverage)
 
@@ -30,4 +31,11 @@ if(CALC_BUILD_GUI)
     )
     target_link_libraries(QtCalculatorUITest PRIVATE app ui Qt6::Test GTest::gtest calc_warnings calc_hardening calc_coverage)
     gtest_discover_tests(QtCalculatorUITest)
+
+    # QSettings による履歴の保存（一時ファイルを使う）
+    add_executable(QtHistoryStoreTest
+        QtHistoryStoreTest.cpp
+    )
+    target_link_libraries(QtHistoryStoreTest PRIVATE ui GTest::gtest_main calc_warnings calc_hardening calc_coverage)
+    gtest_discover_tests(QtHistoryStoreTest)
 endif()

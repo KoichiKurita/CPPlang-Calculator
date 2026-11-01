@@ -1,4 +1,4 @@
-#include "ui/NumberFormat.h"
+#include "domain/NumberFormat.h"
 #include <gtest/gtest.h>
 
 TEST(NumberFormatTest, SmallIntegerIsShownAsIs) {
