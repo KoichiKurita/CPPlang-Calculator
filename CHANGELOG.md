@@ -5,6 +5,8 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+
+## [1.4.0] - 2026-11-01
 ### Added
 - Linux（Ubuntu 24.04）・macOS（Apple Silicon）での GUI ビルドとテストの CI ジョブ（linux-gui / macos）
 - Linux 向け AppImage（linuxdeploy。ツールは版を固定し SHA256 で検証）と macOS 向け .dmg（macdeployqt・アドホック署名）の作成と、Release への添付
@@ -77,7 +79,8 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.0.0...v1.1.0
