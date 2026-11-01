@@ -5,6 +5,15 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+### Added
+- 式の入力欄（例: `(1+2)*3`）と、自作の再帰下降パーサーによる評価（演算子の優先順位・左結合・単項演算子・括弧）
+- 式のエラーの種類（`InvalidExpression` / `ExpressionTooLong` / `ExpressionTooDeep`）と位置の表示（例: `Syntax error at 6`）
+- 入力を信頼できないデータとして扱う対策：長さの上限（256 文字）・入れ子の深さの上限（64）・許可した文字以外の拒否
+- libFuzzer（ASan / UBSan 併用）によるファジングと CI ジョブ（fuzz）
+- 式の評価のユニットテスト、式の入力欄の GUI テスト
+
+### Changed
+- ウィンドウの大きさを中身に合わせて固定するよう変更
 
 ## [1.4.0] - 2026-11-01
 ### Added

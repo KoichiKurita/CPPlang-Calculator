@@ -1,4 +1,5 @@
 #include "QtCalculatorUI.h"
+#include "../domain/Expression.h"
 #include "ErrorMessage.h"
 #include "KeyInput.h"
 #include "NumberFormat.h"
@@ -8,9 +9,18 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-QtCalculatorUI::QtCalculatorUI() {
+QtCalculatorUI::QtCalculatorUI() : expressionInput_(new QLineEdit), display_(new QLineEdit("0")) {
+    // 式の入力欄。Enter で評価し、結果を表示欄に出す
+    expressionInput_->setObjectName("expression"); // GUI テストから参照するための名前
+    expressionInput_->setPlaceholderText("Expression, e.g. (1+2)*3  [Enter]");
+    expressionInput_->setMaxLength(static_cast<int>(kMaxExpressionLength));
+    connect(expressionInput_, &QLineEdit::returnPressed, this, [this] {
+        Input input{InputType::Expression};
+        input.expression = expressionInput_->text().toStdString();
+        emitInput(input);
+    });
+
     // 表示部（キーボード入力をウィジェット本体で受けるため、フォーカスを取らせない）
-    display_ = new QLineEdit("0");
     display_->setReadOnly(true);
     display_->setAlignment(Qt::AlignRight);
     display_->setMinimumHeight(30);
@@ -18,6 +28,7 @@ QtCalculatorUI::QtCalculatorUI() {
     display_->setObjectName("display"); // GUI テストから参照するための名前
 
     auto* mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(expressionInput_);
     mainLayout->addWidget(display_);
 
     auto* grid = new QGridLayout;
@@ -58,7 +69,9 @@ QtCalculatorUI::QtCalculatorUI() {
     mainLayout->addLayout(grid);
     setLayout(mainLayout);
     setWindowTitle("QtCalculator");
-    setFixedSize(300, 300);
+    // ウィンドウの大きさを中身に合わせて固定する（固定値だと部品の間に余白ができるため）
+    setMinimumWidth(300);
+    mainLayout->setSizeConstraint(QLayout::SetFixedSize);
 
     // キーボード入力を受け付ける
     setFocusPolicy(Qt::StrongFocus);
@@ -79,13 +92,24 @@ void QtCalculatorUI::handleEvent(const CalculatorEvent& event) {
                 display_->setText(QString::fromStdString(text));
             } else if constexpr (std::is_same_v<T, Error>) {
                 // モーダルダイアログは使わず表示欄に出す（次の入力で表示が更新される）
-                display_->setText(QString::fromUtf8(errorMessage(e.code)));
+                display_->setText(QString::fromStdString(errorText(e)));
             }
         },
         event);
 }
 
 void QtCalculatorUI::keyPressEvent(QKeyEvent* event) {
+    // 式の入力欄で処理されなかったキー（Enter・Esc など）は親のこのウィジェットに届く。
+    // そのまま電卓の操作として扱うと「Enter で = が押される」ことになるため区別する
+    if (expressionInput_->hasFocus()) {
+        if (event->key() == Qt::Key_Escape) {
+            // Esc：入力欄を空にして、ボタン電卓のキーボード操作に戻る
+            expressionInput_->clear();
+            setFocus();
+        }
+        return;
+    }
+
     // 文字を持たないキー
     switch (event->key()) {
         case Qt::Key_Return:

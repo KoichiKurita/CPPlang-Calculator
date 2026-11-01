@@ -92,3 +92,32 @@ TEST(CalculatorControllerTest, BackspaceEditsEntry) {
 
     EXPECT_DOUBLE_EQ(ui.display(), 4.0);
 }
+
+TEST(CalculatorControllerTest, ExpressionResultCanBeUsedInNextCalculation) {
+    FakeUI ui;
+    CalculatorController controller(ui);
+    controller.run();
+
+    Input expression{InputType::Expression};
+    expression.expression = "(1+2)*3";
+    ui.press(expression);
+    EXPECT_DOUBLE_EQ(ui.display(), 9.0);
+
+    // 結果に続けてボタンで計算できる：9 + 1 = 10
+    ui.press({InputType::Operator, 0, Operator::Add});
+    ui.press({InputType::Digit, 1});
+    ui.press({InputType::Equal});
+    EXPECT_DOUBLE_EQ(ui.display(), 10.0);
+}
+
+TEST(CalculatorControllerTest, InvalidExpressionShowsError) {
+    FakeUI ui;
+    CalculatorController controller(ui);
+    controller.run();
+
+    Input expression{InputType::Expression};
+    expression.expression = "1+";
+    ui.press(expression);
+
+    EXPECT_TRUE(ui.showsError());
+}

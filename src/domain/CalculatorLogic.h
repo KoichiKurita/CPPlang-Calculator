@@ -1,6 +1,7 @@
 #pragma once
 #include "CalculatorEvent.h"
 #include "CalculatorState.h"
+#include "Expression.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -160,4 +161,17 @@ inline std::pair<CalculatorState, CalculatorEvent> inputOperator(const Calculato
 // ⑦ clear
 inline std::pair<CalculatorState, CalculatorEvent> clearAll() {
     return {CalculatorState{}, DisplayUpdated{0}};
+}
+
+// ⑧ evaluateExpressionInput：式の入力欄の内容を評価する
+inline std::pair<CalculatorState, CalculatorEvent>
+evaluateExpressionInput(const CalculatorState& s, std::string_view expression) {
+    const auto result = evaluateExpression(expression);
+    if (const auto* error = std::get_if<Error>(&result)) {
+        return {s, *error};
+    }
+    // 成功したら結果を表示中の値にする（続けてボタンで計算できる）
+    CalculatorState next{};
+    next.current = std::get<double>(result);
+    return {next, DisplayUpdated{next.current}};
 }

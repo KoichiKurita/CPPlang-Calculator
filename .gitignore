@@ -71,3 +71,5 @@ AppDir/
 tools/
 *.AppImage
 *.dmg
+/corpus/
+crash-*
