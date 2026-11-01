@@ -125,3 +125,35 @@ TEST(CalculatorLogicTest, OverflowIsReportedAsError) {
 
     EXPECT_TRUE(isError(e1));
 }
+
+TEST(CalculatorLogicTest, Subtraction) {
+    auto [s1, e1] = inputDigit({}, 9);
+    auto [s2, e2] = inputOperator(s1, '-');
+    auto [s3, e3] = inputDigit(s2, 4);
+    auto [s4, e4] = calculate(s3);
+
+    EXPECT_DOUBLE_EQ(displayed(e4), 5.0);
+}
+
+TEST(CalculatorLogicTest, Division) {
+    auto [s1, e1] = inputDigit({}, 8);
+    auto [s2, e2] = inputOperator(s1, '/');
+    auto [s3, e3] = inputDigit(s2, 2);
+    auto [s4, e4] = calculate(s3);
+
+    EXPECT_DOUBLE_EQ(displayed(e4), 4.0);
+}
+
+TEST(CalculatorLogicTest, CalculateWithInvalidOperatorInStateIsError) {
+    // inputOperator を経由しない不正な状態でも、calculate
+    // は安全にエラーを返す（防御的プログラミング）
+    CalculatorState s{};
+    s.current = 1;
+    s.stored = 2;
+    s.op = '%';
+    s.hasOp = true;
+
+    auto [s1, e1] = calculate(s);
+
+    EXPECT_TRUE(isError(e1));
+}

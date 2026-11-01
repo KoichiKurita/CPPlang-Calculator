@@ -9,6 +9,8 @@
 - clang-format / clang-tidy / cppcheck による静的解析と CI ジョブ（static-analysis）
 - SECURITY.md（脆弱性の報告方法）と Dependabot による GitHub Actions の自動更新
 - 実行ファイルのハードニング（スタック保護・_FORTIFY_SOURCE・ASLR/DEP・PIE/Full RELRO）と CI での検証
+- gcovr によるカバレッジ計測（目標: 行 95% / 分岐 90%）、CI のジョブサマリー表示、GitHub Pages へのレポートとバッジの公開
+- 未テストだった引き算・割り算・不正な演算子状態・コントローラのクリアのテスト
 
 ### Changed
 - GitHub Actions をコミット SHA で固定し、checkout で認証情報を保持しないよう変更

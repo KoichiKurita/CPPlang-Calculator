@@ -14,7 +14,7 @@ add_executable(CalculatorLogicTest
     CalculatorControllerTest.cpp
     NumberFormatTest.cpp
 )
-target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings calc_hardening)
+target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings calc_hardening calc_coverage)
 
 include(GoogleTest)
 gtest_discover_tests(CalculatorLogicTest)

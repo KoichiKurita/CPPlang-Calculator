@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(CALC_BUILD_GUI   "Build the Qt GUI application" ON)
 option(CALC_BUILD_TESTS "Build unit tests (GoogleTest)" ON)
+option(CALC_ENABLE_COVERAGE "Instrument code for coverage measurement (GCC)" OFF)
 
 # 自分のコードにだけ適用する警告設定（外部ライブラリには適用しない）
 add_library(calc_warnings INTERFACE)
@@ -38,6 +39,16 @@ if(NOT MSVC)
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         target_link_options(calc_hardening INTERFACE -pie -Wl,-z,relro -Wl,-z,now)
     endif()
+endif()
+
+# カバレッジ計測（gcov）。自分のターゲットにだけ適用する
+add_library(calc_coverage INTERFACE)
+if(CALC_ENABLE_COVERAGE)
+    if(MSVC)
+        message(FATAL_ERROR "CALC_ENABLE_COVERAGE is supported only with GCC/Clang")
+    endif()
+    target_compile_options(calc_coverage INTERFACE --coverage -O0 -g)
+    target_link_options(calc_coverage INTERFACE --coverage)
 endif()
 
 add_subdirectory(src)
