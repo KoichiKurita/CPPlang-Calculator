@@ -2,6 +2,7 @@
 #include "app/CalculatorController.h"
 #include <QApplication>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QTest>
 #include <gtest/gtest.h>
@@ -22,6 +23,7 @@ protected:
     }
 
     QLineEdit* expressionInput() const { return ui_.findChild<QLineEdit*>("expression"); }
+    QListWidget* historyList() const { return ui_.findChild<QListWidget*>("history"); }
 
     // 式の入力欄にフォーカスを移して入力し、Enter を押す
     void enterExpression(const char* text) {
@@ -114,6 +116,35 @@ TEST_F(QtCalculatorUITest, EscapeInExpressionInputClearsIt) {
     // フォーカスがウィンドウに戻り、キーボードでボタン電卓を操作できる
     QTest::keyClicks(&ui_, "7");
     EXPECT_EQ(display(), "7");
+}
+
+TEST_F(QtCalculatorUITest, CalculationAppearsInHistory) {
+    click("7");
+    click("+");
+    click("8");
+    click("=");
+    enterExpression("(1+2)*3");
+
+    ASSERT_EQ(historyList()->count(), 2);
+    EXPECT_EQ(historyList()->item(0)->text().toStdString(), "(1+2)*3 = 9"); // 新しいものが先頭
+    EXPECT_EQ(historyList()->item(1)->text().toStdString(), "7 + 8 = 15");
+}
+
+TEST_F(QtCalculatorUITest, ClickingHistoryReusesResult) {
+    enterExpression("6*7");
+    click("C");
+    ASSERT_EQ(display(), "0");
+
+    // QListWidget の項目をクリックしたときと同じシグナルを送る
+    emit historyList() -> itemClicked(historyList()->item(0));
+    EXPECT_EQ(display(), "42");
+}
+
+TEST_F(QtCalculatorUITest, ClearHistoryButton) {
+    enterExpression("1+1");
+    click("Clear history");
+
+    EXPECT_EQ(historyList()->count(), 0);
 }
 
 int main(int argc, char** argv) {

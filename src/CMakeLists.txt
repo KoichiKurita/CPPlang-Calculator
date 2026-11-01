@@ -20,6 +20,8 @@ if(CALC_BUILD_GUI)
     add_library(ui
         ui/QtCalculatorUI.cpp
         ui/QtCalculatorUI.h
+        ui/QtHistoryStore.cpp
+        ui/QtHistoryStore.h
     )
     target_link_libraries(ui PUBLIC Qt6::Widgets domain PRIVATE calc_warnings calc_hardening calc_coverage)
     target_include_directories(ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
