@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=QtCalculator
+Comment=Calculator built with C++17 and Qt6
+Exec=QtCalculator
+Icon=qtcalculator
+Categories=Utility;Calculator;
+Terminal=false

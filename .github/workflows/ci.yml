@@ -162,6 +162,116 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
+  # ---- Linux：GUI ビルド + テスト（GUI テスト含む）+ AppImage 作成 ----
+  linux-gui:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
+
+      - name: Install Qt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qt6-base-dev qt6-base-dev-tools qt6-qpa-plugins libgl1-mesa-dev ninja-build
+
+      - name: Configure and Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+      # linuxdeploy で Qt を同梱した AppImage を作る（ツールは版を固定し SHA256 で検証）
+      - name: Package (AppImage)
+        run: |
+          set -euo pipefail
+          mkdir -p tools
+          LD_URL=https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          QT_URL=https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage
+          curl -sSfL -o tools/linuxdeploy-x86_64.AppImage "$LD_URL"
+          curl -sSfL -o tools/linuxdeploy-plugin-qt-x86_64.AppImage "$QT_URL"
+          # ダウンロードしたツールが改ざんされていないことを SHA256 で検証する
+          sha256sum -c <<'SUMS'
+          c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  tools/linuxdeploy-x86_64.AppImage
+          15106be885c1c48a021198e7e1e9a48ce9d02a86dd0a1848f00bdbf3c1c92724  tools/linuxdeploy-plugin-qt-x86_64.AppImage
+          SUMS
+          chmod +x tools/*.AppImage
+
+          # CI には FUSE がないため、AppImage を展開して実行する
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export QMAKE=/usr/bin/qmake6
+          # スモークテストを画面なしで実行できるよう、offscreen プラグインも同梱する
+          export EXTRA_PLATFORM_PLUGINS=libqoffscreen.so
+          export LDAI_OUTPUT=QtCalculator-linux-x86_64.AppImage
+
+          ./tools/linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --executable build/src/QtCalculator \
+            --desktop-file packaging/linux/qtcalculator.desktop \
+            --icon-file packaging/linux/qtcalculator.png \
+            --plugin qt \
+            --output appimage
+
+          # 起動確認（スモークテスト）
+          QT_QPA_PLATFORM=offscreen ./QtCalculator-linux-x86_64.AppImage --smoke-test
+          sha256sum QtCalculator-linux-x86_64.AppImage > QtCalculator-linux-x86_64.AppImage.sha256
+          cat QtCalculator-linux-x86_64.AppImage.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: QtCalculator-Linux
+          path: |
+            QtCalculator-linux-x86_64.AppImage
+            QtCalculator-linux-x86_64.AppImage.sha256
+
+  # ---- macOS：GUI ビルド + テスト（GUI テスト含む）+ .dmg 作成 ----
+  macos:
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
+
+      - name: Install Qt
+        run: brew install qt ninja
+
+      - name: Configure and Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+          cmake --build build
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+      # macdeployqt で Qt を .app に同梱し、.dmg にまとめる
+      - name: Package (.dmg)
+        run: |
+          set -euo pipefail
+          APP=build/src/QtCalculator.app
+          "$(brew --prefix qt)/bin/macdeployqt" "$APP"
+          # macdeployqt がライブラリを書き換えると署名が無効になるため、アドホック署名をし直す
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+          # 起動確認（スモークテスト）
+          "$APP/Contents/MacOS/QtCalculator" --smoke-test
+          hdiutil create -volname QtCalculator -srcfolder "$APP" -ov -format UDZO QtCalculator-macos-arm64.dmg
+          shasum -a 256 QtCalculator-macos-arm64.dmg > QtCalculator-macos-arm64.dmg.sha256
+          cat QtCalculator-macos-arm64.dmg.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: QtCalculator-macOS
+          path: |
+            QtCalculator-macos-arm64.dmg
+            QtCalculator-macos-arm64.dmg.sha256
+
   # ---- Windows：GUI ビルド + テスト + 配布用パッケージ作成 ----
   windows-build:
     runs-on: windows-latest
@@ -240,15 +350,17 @@ jobs:
   # ---- タグ push 時のみ Release を作成（両ジョブの成功が条件）----
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ linux-test, static-analysis, coverage, windows-build ]
+    needs: [ linux-test, static-analysis, coverage, windows-build, linux-gui, macos ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download artifact
+      # 3つの OS の配布物（QtCalculator-Windows / -Linux / -macOS）をまとめて取得する
+      - name: Download artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: QtCalculator-Windows
+          pattern: QtCalculator-*
+          merge-multiple: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -257,3 +369,7 @@ jobs:
           files: |
             QtCalculator-windows-x64.zip
             QtCalculator-windows-x64.zip.sha256
+            QtCalculator-linux-x86_64.AppImage
+            QtCalculator-linux-x86_64.AppImage.sha256
+            QtCalculator-macos-arm64.dmg
+            QtCalculator-macos-arm64.dmg.sha256

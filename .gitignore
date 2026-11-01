@@ -67,3 +67,7 @@ build-*/
 deploy/
 *.zip
 *.sha256
+AppDir/
+tools/
+*.AppImage
+*.dmg

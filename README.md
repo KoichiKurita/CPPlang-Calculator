@@ -10,6 +10,7 @@
 ## 📌 Overview
 
 A calculator application built with **C++17 and Qt6**, designed using clean architecture principles and a pure-function domain model.
+It is built, tested and released for **Windows, Linux and macOS**.
 
 This project intentionally applies the same architectural philosophy as the [Number Guess Game](https://github.com/KoichiKurita/CPPlang-Number-Guess-Game) project, demonstrating architectural consistency across different domains.
 
@@ -244,6 +245,7 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 | `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0`, `0.1 + 0.2` shown as `0.3` |
 | `ErrorMessageTest` | UI (Qt-free) | A message for every `ErrorCode` |
 | `KeyInputTest` | UI (Qt-free) | Mapping of keyboard characters to `Input` |
+| `QtCalculatorUITest` | UI (Qt, offscreen) | Real Qt widgets driven with **QTest**: button clicks, keyboard input, display of decimals and errors |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
 
@@ -300,7 +302,8 @@ CPPlang-Calculator/
 │  ├─ app/           # Controller (Qt-free)
 │  ├─ ui/            # Qt UI + Qt-free number formatter
 │  └─ main.cpp
-├─ test/             # GoogleTest unit tests
+├─ test/             # GoogleTest unit tests + QTest GUI tests
+├─ packaging/linux/  # Desktop entry and icon for the AppImage
 ├─ .github/
 │  ├─ workflows/ci.yml
 │  ├─ dependabot.yml
@@ -313,9 +316,10 @@ CPPlang-Calculator/
 
 ---
 
-## ⚙️ Build (Windows + MSYS2 UCRT64)
+## ⚙️ Build
 
-### Requirements
+### Windows (MSYS2 UCRT64)
+
 
 - MSYS2 (UCRT64 environment)
 - `mingw-w64-ucrt-x86_64-gcc`
@@ -328,6 +332,19 @@ CPPlang-Calculator/
 pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,qt6-base} git
 ```
 
+### Linux (Ubuntu 24.04)
+
+```bash
+sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-qpa-plugins libgl1-mesa-dev cmake ninja-build git
+```
+
+### macOS (Homebrew)
+
+```bash
+brew install qt cmake ninja
+# configure with: -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+```
+
 ### Build & Test
 
 ```bash
@@ -336,10 +353,15 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+GUI tests run without a display (`QT_QPA_PLATFORM=offscreen` is used automatically).
+
 ### Run
 
 ```bash
-./build/src/QtCalculator.exe
+./build/src/QtCalculator.exe                               # Windows
+./build/src/QtCalculator                                   # Linux
+open ./build/src/QtCalculator.app                          # macOS
+./build/src/QtCalculator --smoke-test                      # start and exit immediately (used in CI)
 ```
 
 ### CMake Options
@@ -372,14 +394,27 @@ so keep the local major version in sync with the CI version.
 
 ## 📦 Download
 
-Download `QtCalculator-windows-x64.zip` from the [Releases](https://github.com/KoichiKurita/CPPlang-Calculator/releases) page.
-The zip includes all required Qt / MinGW DLLs, so **no Qt installation is needed**.
+Download the package for your OS from the [Releases](https://github.com/KoichiKurita/CPPlang-Calculator/releases) page.
+Every package bundles the required Qt libraries, so **no Qt installation is needed**.
 
-Verify the download with the published checksum (PowerShell):
+| OS | File | How to run |
+| --- | --- | --- |
+| Windows (x64) | `QtCalculator-windows-x64.zip` | Extract and run `QtCalculator.exe` |
+| Linux (x86_64) | `QtCalculator-linux-x86_64.AppImage` | `chmod +x` and run (requires glibc 2.39+, e.g. Ubuntu 24.04 or later) |
+| macOS (Apple Silicon) | `QtCalculator-macos-arm64.dmg` | Open the dmg and drag `QtCalculator.app` to Applications |
 
-```powershell
+The macOS app is **not notarized** (ad-hoc signed only). On first launch, right-click the app and choose **Open**,
+or remove the quarantine attribute: `xattr -dr com.apple.quarantine /Applications/QtCalculator.app`
+
+Verify the download with the published checksum:
+
+```bash
+# Windows (PowerShell)
 Get-FileHash .\QtCalculator-windows-x64.zip -Algorithm SHA256
-# Compare with QtCalculator-windows-x64.zip.sha256
+# Linux
+sha256sum -c QtCalculator-linux-x86_64.AppImage.sha256
+# macOS
+shasum -a 256 -c QtCalculator-macos-arm64.dmg.sha256
 ```
 
 ---
@@ -394,14 +429,16 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | `coverage` | Ubuntu | Coverage with gcovr (fails below 95% lines / 90% branches); report in job summary |
 | `deploy-coverage` | Ubuntu | On push to `main`: publishes the HTML coverage report and badge to GitHub Pages |
 | `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, ASLR / DEP verification, packaging with `windeployqt` + dependent DLLs, SHA256 |
-| `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the zip and checksum |
+| `linux-gui` | Ubuntu 24.04 | GUI build, unit + GUI tests, AppImage via linuxdeploy (tools pinned and SHA256-verified), smoke test |
+| `macos` | macOS 15 (Apple Silicon) | GUI build, unit + GUI tests, `.app` via macdeployqt (ad-hoc signed), `.dmg`, smoke test |
+| `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the packages for all three OSes and their checksums |
 | `static-analysis` | Ubuntu | clang-format check, clang-tidy, cppcheck |
 
 Release example:
 
 ```bash
-git tag -a v1.1.0 -m "v1.1.0"
-git push origin v1.1.0
+git tag -a v1.4.0 -m "v1.4.0"
+git push origin v1.4.0
 ```
 
 ---
@@ -410,10 +447,9 @@ git push origin v1.1.0
 
 - `main`: release branch (tagged), `develop`: integration branch
 - Short-lived topic branches (`fix/`, `test/`, `ci/`, `docs/`, `chore/`) are merged into `develop` via pull requests
-- Branch rulesets require pull requests and passing CI (`linux-test`, `windows-build`)
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Changes are recorded in [CHANGELOG.md](CHANGELOG.md)
-- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `coverage`, `windows-build`)
+- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `coverage`, `windows-build`, `linux-gui`, `macos`)
 
 ---
 
@@ -440,6 +476,12 @@ This calculator shares the same architectural philosophy as the [Number Guess Ga
    - Fixed a dangling reference in the controller (state is now owned by the controller)
    - Fixed domain bugs (operator replacement, error propagation) and added input validation
    - Introduced GoogleTest, sanitizer-enabled CI, and a self-contained release package
+6. **v1.2.0 — Quality, security and design**
+   - Static analysis (clang-format / clang-tidy / cppcheck), coverage with GitHub Pages
+   - Actions pinned by SHA, Dependabot, hardened binaries, SECURITY.md
+   - Type-safe state (`PendingOperation`, `Operator`, `ErrorCode`); errors shown in the display
+7. **v1.3.0 — Features**: decimal input, sign toggle, backspace, keyboard input
+8. **v1.4.0 — Multi-platform**: Linux (AppImage) and macOS (.dmg) builds and releases, QTest GUI tests
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

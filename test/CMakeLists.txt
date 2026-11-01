@@ -20,3 +20,13 @@ target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main c
 
 include(GoogleTest)
 gtest_discover_tests(CalculatorLogicTest)
+
+# ---- GUI テスト（Qt の画面を offscreen で動かし、ボタン・キー入力の結果を確かめる）----
+if(CALC_BUILD_GUI)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(QtCalculatorUITest
+        QtCalculatorUITest.cpp
+    )
+    target_link_libraries(QtCalculatorUITest PRIVATE app ui Qt6::Test GTest::gtest calc_warnings calc_hardening calc_coverage)
+    gtest_discover_tests(QtCalculatorUITest)
+endif()
