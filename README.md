@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/KoichiKurita/CPPlang-Calculator/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KoichiKurita/CPPlang-Calculator/actions/workflows/ci.yml)
 [![GitHub release](https://img.shields.io/github/v/release/KoichiKurita/CPPlang-Calculator)](https://github.com/KoichiKurita/CPPlang-Calculator/releases)
+[![Coverage](https://img.shields.io/endpoint?url=https://koichikurita.github.io/CPPlang-Calculator/badge.json)](https://koichikurita.github.io/CPPlang-Calculator/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -184,7 +185,7 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 | Test suite | Target | What it verifies |
 | --- | --- | --- |
 | `CalculatorLogicTest` | Domain | Arithmetic, continuous calculation, operator replacement, error propagation, input validation, digit limit, overflow |
-| `CalculatorControllerTest` | Application | State is kept after `run()` returns (uses a Qt-free `FakeUI`) |
+| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear (uses a Qt-free `FakeUI`) |
 | `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0` |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
@@ -193,6 +194,25 @@ Because the domain and application layers are Qt-free, tests can be built **with
 cmake -S . -B build-noqt -DCALC_BUILD_GUI=OFF
 cmake --build build-noqt
 ctest --test-dir build-noqt --output-on-failure
+```
+
+### Coverage
+
+Coverage is measured with **gcov / [gcovr](https://gcovr.com/)** in CI (`coverage` job).
+The job fails if line coverage drops below **95%** or branch coverage below **90%**.
+The HTML report for the latest release is published to [GitHub Pages](https://koichikurita.github.io/CPPlang-Calculator/).
+
+Measure locally:
+
+```bash
+python -m venv ~/.venv-gcovr && ~/.venv-gcovr/bin/pip install gcovr==8.8
+
+cmake -S . -B build-cov -G Ninja -DCALC_BUILD_GUI=OFF -DCMAKE_BUILD_TYPE=Debug -DCALC_ENABLE_COVERAGE=ON
+cmake --build build-cov
+find build-cov -name '*.gcda' -delete
+ctest --test-dir build-cov
+~/.venv-gcovr/bin/gcovr --root . --filter 'src/' --object-directory build-cov \
+  --exclude-unreachable-branches --exclude-throw-branches --print-summary
 ```
 
 ---
@@ -271,6 +291,7 @@ ctest --test-dir build --output-on-failure
 | --- | --- | --- |
 | `CALC_BUILD_GUI` | `ON` | Build the Qt GUI application |
 | `CALC_BUILD_TESTS` | `ON` | Build unit tests |
+| `CALC_ENABLE_COVERAGE` | `OFF` | Instrument code for coverage measurement (GCC) |
 
 ### Code Style & Static Analysis
 
@@ -309,6 +330,8 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | Job | Runner | Description |
 | --- | --- | --- |
 | `linux-test` | Ubuntu | Qt-free build, all tests with ASan / UBSan |
+| `coverage` | Ubuntu | Coverage with gcovr (fails below 95% lines / 90% branches); report in job summary |
+| `deploy-coverage` | Ubuntu | On push to `main`: publishes the HTML coverage report and badge to GitHub Pages |
 | `windows-build` | Windows (MSYS2 UCRT64) | GUI build, tests, ASLR / DEP verification, packaging with `windeployqt` + dependent DLLs, SHA256 |
 | `release` | Ubuntu | On tag push (`v*`): creates a GitHub Release with the zip and checksum |
 | `static-analysis` | Ubuntu | clang-format check, clang-tidy, cppcheck |
@@ -329,7 +352,7 @@ git push origin v1.1.0
 - Branch rulesets require pull requests and passing CI (`linux-test`, `windows-build`)
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Changes are recorded in [CHANGELOG.md](CHANGELOG.md)
-- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `windows-build`)
+- Branch rulesets require pull requests and passing CI (`linux-test`, `static-analysis`, `coverage`, `windows-build`)
 
 ---
 

@@ -31,3 +31,14 @@ TEST(CalculatorControllerTest, KeepsStateAfterRunReturns) {
 
     EXPECT_DOUBLE_EQ(ui.display(), 3.0);
 }
+
+TEST(CalculatorControllerTest, ClearResetsDisplay) {
+    FakeUI ui;
+    CalculatorController controller(ui);
+    controller.run();
+
+    ui.press({InputType::Digit, 7});
+    ui.press({InputType::Clear});
+
+    EXPECT_DOUBLE_EQ(ui.display(), 0.0);
+}

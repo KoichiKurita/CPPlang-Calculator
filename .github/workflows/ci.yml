@@ -77,7 +77,86 @@ jobs:
           --error-exitcode=1
           src test
   
-        # ---- Windows：GUI ビルド + テスト + 配布用パッケージ作成 ----
+        # ---- カバレッジ計測（gcovr）：目標未達で失敗。main への push 時は GitHub Pages に公開 ----
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false # 後続のステップに GitHub のトークンを残さない
+
+      - name: Install gcovr
+        run: pipx install gcovr==8.8
+
+      - name: Configure (coverage)
+        run: >
+          cmake -S . -B build
+          -DCALC_BUILD_GUI=OFF
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCALC_ENABLE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      # gtest_discover_tests がビルド時にテストを実行して作った計測データを消してから計測する
+      - name: Test
+        run: |
+          find build -name '*.gcda' -delete
+          ctest --test-dir build --output-on-failure
+
+      - name: Coverage report
+        run: |
+          mkdir -p coverage
+          gcovr --root . --filter 'src/' --object-directory build \
+            --exclude-unreachable-branches --exclude-throw-branches \
+            --print-summary \
+            --html-details coverage/index.html --html-title "CPPlang-Calculator Coverage" \
+            --json-summary coverage/summary.json \
+            --markdown-summary coverage/summary.md \
+            --fail-under-line 95 --fail-under-branch 90
+          cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      # shields.io の endpoint バッジ用 JSON を作る
+      - name: Create badge JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          pct = json.load(open("coverage/summary.json"))["line_percent"]
+          color = "brightgreen" if pct >= 95 else "green" if pct >= 90 else "yellow" if pct >= 80 else "red"
+          json.dump({"schemaVersion": 1, "label": "coverage", "message": f"{pct:.1f}%", "color": color},
+                    open("coverage/badge.json", "w"))
+          PY
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: coverage/
+
+  # ---- カバレッジレポートを GitHub Pages に公開（main への push 時のみ）----
+  deploy-coverage:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: coverage
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write    # Pages へのデプロイ
+      id-token: write # デプロイ元の正当性を OIDC で証明
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # ---- Windows：GUI ビルド + テスト + 配布用パッケージ作成 ----
   windows-build:
     runs-on: windows-latest
     steps:
@@ -155,7 +234,7 @@ jobs:
   # ---- タグ push 時のみ Release を作成（両ジョブの成功が条件）----
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ linux-test, static-analysis, windows-build ]
+    needs: [ linux-test, static-analysis, coverage, windows-build ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
