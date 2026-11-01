@@ -115,7 +115,7 @@ jobs:
         run: |
           mkdir -p coverage
           gcovr --root . --filter 'src/' --object-directory build \
-            --exclude-unreachable-branches --exclude-throw-branches \
+            --exclude-unreachable-branches --exclude-throw-branches --exclude-noncode-lines \
             --print-summary \
             --html-details coverage/index.html --html-title "CPPlang-Calculator Coverage" \
             --json-summary coverage/summary.json \
