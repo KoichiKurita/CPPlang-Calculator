@@ -5,6 +5,8 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+
+## [1.2.0] - 2026-11-01
 ### Added
 - clang-format / clang-tidy / cppcheck による静的解析と CI ジョブ（static-analysis）
 - SECURITY.md（脆弱性の報告方法）と Dependabot による GitHub Actions の自動更新
@@ -51,6 +53,7 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/KoichiKurita/CPPlang-Calculator/releases/tag/v1.0.0
