@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <variant>
 
 // エラーの種類。表示文言への変換は UI 層（ErrorMessage.h）で行う
@@ -12,6 +13,14 @@ enum class ErrorCode : std::uint8_t {
 
 struct DisplayUpdated {
     double value;
+    // 入力中の文字列。空でなければ UI はこれをそのまま表示する
+    // （"0." や "1.50" のような入力途中の表示を保つため）
+    //
+    // {} は、DisplayUpdated{value} と entry を省略して初期化したときの
+    // GCC の -Wmissing-field-initializers を防ぐために付けている。
+    // clang-tidy の readability-redundant-member-init とは両立しないため抑制する。
+    // NOLINTNEXTLINE(readability-redundant-member-init)
+    std::string entry{};
 };
 
 struct Error {
