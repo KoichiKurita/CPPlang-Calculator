@@ -5,7 +5,15 @@
 #include <cstdint>
 #include <functional>
 
-enum class InputType : std::uint8_t { Digit, Operator, Equal, Clear };
+enum class InputType : std::uint8_t {
+    Digit,
+    Operator,
+    Equal,
+    Clear,
+    DecimalPoint,
+    ToggleSign,
+    Backspace,
+};
 
 struct Input {
     InputType type{};

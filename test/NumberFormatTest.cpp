@@ -25,3 +25,8 @@ TEST(NumberFormatTest, DecimalResult) {
 TEST(NumberFormatTest, NegativeZeroIsShownAsZero) {
     EXPECT_EQ(formatNumber(-0.0), "0");
 }
+
+TEST(NumberFormatTest, FloatingPointErrorIsHidden) {
+    // 0.1 + 0.2 は double では 0.30000000000000004 になるが、有効数字15桁で 0.3 と表示する
+    EXPECT_EQ(formatNumber(0.1 + 0.2), "0.3");
+}

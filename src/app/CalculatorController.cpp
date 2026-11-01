@@ -14,10 +14,13 @@ void CalculatorController::handle(const Input& input) {
     std::pair<CalculatorState, CalculatorEvent> result{state_, DisplayUpdated{state_.current}};
 
     switch (input.type) {
-        case InputType::Digit:    result = inputDigit(state_, input.value); break;
-        case InputType::Operator: result = inputOperator(state_, input.op); break;
-        case InputType::Equal:    result = calculate(state_); break;
-        case InputType::Clear:    result = clearAll(); break;
+        case InputType::Digit:        result = inputDigit(state_, input.value); break;
+        case InputType::Operator:     result = inputOperator(state_, input.op); break;
+        case InputType::Equal:        result = calculate(state_); break;
+        case InputType::Clear:        result = clearAll(); break;
+        case InputType::DecimalPoint: result = inputDecimalPoint(state_); break;
+        case InputType::ToggleSign:   result = toggleSign(state_); break;
+        case InputType::Backspace:    result = backspace(state_); break;
     }
 
     state_ = result.first;

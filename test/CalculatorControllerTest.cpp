@@ -62,3 +62,33 @@ TEST(CalculatorControllerTest, ErrorIsReplacedByNextInput) {
     EXPECT_FALSE(ui.showsError());
     EXPECT_DOUBLE_EQ(ui.display(), 3.0);
 }
+
+TEST(CalculatorControllerTest, DecimalAndNegativeCalculation) {
+    // 12.5 * -2 = -25（-2 は 2 を入力してから ± で反転）
+    FakeUI ui;
+    CalculatorController controller(ui);
+    controller.run();
+
+    ui.press({InputType::Digit, 1});
+    ui.press({InputType::Digit, 2});
+    ui.press({InputType::DecimalPoint});
+    ui.press({InputType::Digit, 5});
+    ui.press({InputType::Operator, 0, Operator::Multiply});
+    ui.press({InputType::Digit, 2});
+    ui.press({InputType::ToggleSign});
+    ui.press({InputType::Equal});
+
+    EXPECT_DOUBLE_EQ(ui.display(), -25.0);
+}
+
+TEST(CalculatorControllerTest, BackspaceEditsEntry) {
+    FakeUI ui;
+    CalculatorController controller(ui);
+    controller.run();
+
+    ui.press({InputType::Digit, 4});
+    ui.press({InputType::Digit, 2});
+    ui.press({InputType::Backspace});
+
+    EXPECT_DOUBLE_EQ(ui.display(), 4.0);
+}

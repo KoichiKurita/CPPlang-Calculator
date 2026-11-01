@@ -5,6 +5,19 @@
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [Unreleased]
+### Added
+- 小数点（.）・符号反転（±）・バックスペース（⌫）
+- キーボード入力（0-9 . + - * / Enter(=) Esc(C) Backspace）。キーの変換は Qt 非依存の `inputFromChar` に分離
+- 小数・符号反転・バックスペース・キーボード変換のユニットテスト
+
+### Changed
+- 入力中の数値を文字列（`entry`）で保持し、"0." や "1.50" を入力どおりに表示するよう変更（`enteringNumber` を置き換え）
+- ボタン配置を一般的な電卓の配置（C ⌫ ± / ・ 7 8 9 * ・ … ・ 0 . =）に変更
+
+## [1.3.0] - 2026-11-01
+### Changed
+  - GitHub Actions を最新のメジャーバージョンに更新（Dependabot：checkout v7・upload-artifact v7・download-artifact v8・action-gh-release v3）
+  - `.h` ファイルを GitHub の言語統計で C++ として扱うよう設定
 
 ## [1.2.0] - 2026-11-01
 ### Added
@@ -53,7 +66,8 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/KoichiKurita/CPPlang-Calculator/releases/tag/v1.0.0
