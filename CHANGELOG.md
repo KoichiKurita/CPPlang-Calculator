@@ -15,6 +15,8 @@
 ### Changed
 - ウィンドウの大きさを中身に合わせて固定するよう変更
 
+## [1.5.0] - 2026-11-01
+
 ## [1.4.0] - 2026-11-01
 ### Added
 - Linux（Ubuntu 24.04）・macOS（Apple Silicon）での GUI ビルドとテストの CI ジョブ（linux-gui / macos）
@@ -88,7 +90,8 @@
 - 純粋関数によるドメイン層とレイヤードアーキテクチャ
 - GitHub Actions による Windows ビルドと Release 作成
 
-[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/KoichiKurita/CPPlang-Calculator/compare/v1.1.0...v1.2.0
