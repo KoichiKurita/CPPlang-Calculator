@@ -19,3 +19,4 @@ CMakeLists.txt linguist-detectable=false
 *.cmake        linguist-detectable=false
 *Makefile*     linguist-detectable=false
 *.c            linguist-detectable=false
+*.h            linguist-language=C++
