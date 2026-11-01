@@ -7,40 +7,35 @@
 // 入力できる数値の上限（15桁）。double で誤差なく扱える整数の範囲内に収める
 inline constexpr double kMaxInputValue = 1e15;
 
-inline bool isValidOperator(char op) {
-    return op == '+' || op == '-' || op == '*' || op == '/';
-}
-
 // ① calculate
 inline std::pair<CalculatorState, CalculatorEvent> calculate(const CalculatorState& s) {
-    if (!s.hasOp || !s.stored) {
-        return {s, Error{"No operation"}};
+    if (!s.pending) {
+        return {s, Error{ErrorCode::NoOperation}};
     }
 
+    const auto [lhs, op] = *s.pending;
     double result = 0;
-    switch (s.op) {
-        case '+': result = *s.stored + s.current; break;
-        case '-': result = *s.stored - s.current; break;
-        case '*': result = *s.stored * s.current; break;
-        case '/':
+    // Operator の全ての値を case で扱う（default を書かないことで、値を追加したときに
+    // コンパイラが -Wswitch で処理漏れを警告してくれる）
+    switch (op) {
+        case Operator::Add:      result = lhs + s.current; break;
+        case Operator::Subtract: result = lhs - s.current; break;
+        case Operator::Multiply: result = lhs * s.current; break;
+        case Operator::Divide:
             if (s.current == 0) {
-                return {s, Error{"Division by zero"}};
+                return {s, Error{ErrorCode::DivisionByZero}};
             }
-            result = *s.stored / s.current;
+            result = lhs / s.current;
             break;
-        default:
-            // 想定外の演算子で 0 を返さず、エラーとして明示する
-            return {s, Error{"Invalid operator"}};
     }
 
     // inf / NaN を結果として表示させない
     if (!std::isfinite(result)) {
-        return {s, Error{"Overflow"}};
+        return {s, Error{ErrorCode::Overflow}};
     }
 
     CalculatorState next{};
     next.current = result;
-    next.enteringNumber = false;
     return {next, DisplayUpdated{result}};
 }
 
@@ -48,7 +43,7 @@ inline std::pair<CalculatorState, CalculatorEvent> calculate(const CalculatorSta
 inline std::pair<CalculatorState, CalculatorEvent> inputDigit(const CalculatorState& s, int digit) {
     // 入力値の検証：0〜9以外は受け付けない
     if (digit < 0 || digit > 9) {
-        return {s, Error{"Invalid digit"}};
+        return {s, Error{ErrorCode::InvalidDigit}};
     }
 
     CalculatorState next = s;
@@ -71,21 +66,17 @@ inline std::pair<CalculatorState, CalculatorEvent> inputDigit(const CalculatorSt
 
 // ③ inputOperator
 inline std::pair<CalculatorState, CalculatorEvent> inputOperator(const CalculatorState& s,
-                                                                 char op) {
-    if (!isValidOperator(op)) {
-        return {s, Error{"Invalid operator"}};
-    }
-
+                                                                 Operator op) {
     CalculatorState next = s;
 
-    // 演算子の連打（2 + * など）は計算せず、演算子を置き換える
-    if (s.hasOp && !s.enteringNumber) {
-        next.op = op;
-        return {next, DisplayUpdated{next.current}};
-    }
+    if (s.pending) {
+        // 演算子の連打（2 + * など）は計算せず、演算子を置き換える
+        if (!s.enteringNumber) {
+            next.pending->op = op;
+            return {next, DisplayUpdated{next.current}};
+        }
 
-    // 連続計算：既に演算子があれば先に計算
-    if (s.hasOp && s.stored) {
+        // 連続計算：保留中の演算を先に計算する
         auto [calculated, event] = calculate(s);
         // 途中計算のエラー（0除算など）を握りつぶさずに返す
         if (std::holds_alternative<Error>(event)) {
@@ -94,9 +85,7 @@ inline std::pair<CalculatorState, CalculatorEvent> inputOperator(const Calculato
         next = calculated;
     }
 
-    next.stored = next.current;
-    next.op = op;
-    next.hasOp = true;
+    next.pending = PendingOperation{next.current, op};
     next.enteringNumber = false; // 次の数字は新規入力
 
     return {next, DisplayUpdated{next.current}};

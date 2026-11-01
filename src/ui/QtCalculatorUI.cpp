@@ -1,8 +1,8 @@
 #include "QtCalculatorUI.h"
+#include "ErrorMessage.h"
 #include "NumberFormat.h"
 
 #include <QGridLayout>
-#include <QMessageBox>
 #include <QVBoxLayout>
 
 QtCalculatorUI::QtCalculatorUI() {
@@ -39,16 +39,16 @@ QtCalculatorUI::QtCalculatorUI() {
     grid->addWidget(equal, 3, 2);
 
     // 演算子ボタン
-    auto addOp = [&](const QString& text, char op, int r, int c) {
+    auto addOp = [&](const QString& text, Operator op, int r, int c) {
         auto* btn = new QPushButton(text);
         connect(btn, &QPushButton::clicked, this, [this, op] { emitOp(op); });
         grid->addWidget(btn, r, c);
     };
 
-    addOp("+", '+', 0, 3);
-    addOp("-", '-', 1, 3);
-    addOp("*", '*', 2, 3);
-    addOp("/", '/', 3, 3);
+    addOp("+", Operator::Add, 0, 3);
+    addOp("-", Operator::Subtract, 1, 3);
+    addOp("*", Operator::Multiply, 2, 3);
+    addOp("/", Operator::Divide, 3, 3);
 
     mainLayout->addLayout(grid);
 
@@ -79,7 +79,8 @@ void QtCalculatorUI::handleEvent(const CalculatorEvent& event) {
             if constexpr (std::is_same_v<T, DisplayUpdated>) {
                 display_->setText(QString::fromStdString(formatNumber(e.value)));
             } else if constexpr (std::is_same_v<T, Error>) {
-                QMessageBox::warning(this, "Error", e.message);
+                // モーダルダイアログは使わず表示欄に出す（次の入力で表示が更新される）
+                display_->setText(QString::fromUtf8(errorMessage(e.code)));
             }
         },
         event);
@@ -91,7 +92,7 @@ void QtCalculatorUI::emitDigit(int d) {
     }
 }
 
-void QtCalculatorUI::emitOp(char op) {
+void QtCalculatorUI::emitOp(Operator op) {
     if (handler_) {
         handler_({InputType::Operator, 0, op});
     }

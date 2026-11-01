@@ -13,6 +13,7 @@ add_executable(CalculatorLogicTest
     CalculatorLogicTest.cpp
     CalculatorControllerTest.cpp
     NumberFormatTest.cpp
+    ErrorMessageTest.cpp
 )
 target_link_libraries(CalculatorLogicTest PRIVATE app domain GTest::gtest_main calc_warnings calc_hardening calc_coverage)
 
