@@ -336,6 +336,10 @@ cppcheck --enable=warning,style,performance,portability --std=c++17 --language=c
 ```
 
 clang-tidy runs in CI (`static-analysis` job).
+
+CI pins **clang-format 23.1.3** (installed from PyPI) so that formatting results match the local MSYS2 version (23.x).
+Different clang-format versions can format the same code differently (e.g. alignment of trailing comments containing non-ASCII text),
+so keep the local major version in sync with the CI version.
 ---
 
 ## 📦 Download
