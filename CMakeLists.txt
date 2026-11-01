@@ -20,6 +20,26 @@ else()
     target_compile_options(calc_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
+# 実行ファイルの防御機能（ハードニング）。自分のターゲットにだけ適用する
+add_library(calc_hardening INTERFACE)
+if(NOT MSVC)
+    target_compile_options(calc_hardening INTERFACE
+        -fstack-protector-strong                       # スタック破壊の検出
+        $<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=2>   # 危険な標準関数の境界チェック（最適化ビルドで有効）
+        -D_GLIBCXX_ASSERTIONS                          # 標準コンテナの範囲外アクセス検出
+    )
+    target_link_options(calc_hardening INTERFACE -fstack-protector-strong)
+    if(WIN32)
+        # ASLR（アドレス空間配置のランダム化）と DEP（データ領域の実行禁止）を明示
+        target_link_options(calc_hardening INTERFACE
+            -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va)
+    else()
+        # 位置独立実行形式（PIE）と、再配置後の GOT を読み取り専用にする（Full RELRO）
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        target_link_options(calc_hardening INTERFACE -pie -Wl,-z,relro -Wl,-z,now)
+    endif()
+endif()
+
 add_subdirectory(src)
 
 if(CALC_BUILD_TESTS)

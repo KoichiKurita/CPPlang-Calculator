@@ -7,9 +7,11 @@
 ## [Unreleased]
 ### Added
 - clang-format / clang-tidy / cppcheck による静的解析と CI ジョブ（static-analysis）
+- SECURITY.md（脆弱性の報告方法）と Dependabot による GitHub Actions の自動更新
+- 実行ファイルのハードニング（スタック保護・_FORTIFY_SOURCE・ASLR/DEP・PIE/Full RELRO）と CI での検証
 
 ### Changed
-- 設計図を PlantUML + PNG から Mermaid（README に直接記述）に移行し、v1.1.0 の実装に合わせて更新
+- GitHub Actions をコミット SHA で固定し、checkout で認証情報を保持しないよう変更
 - 設計図を PlantUML + PNG から Mermaid（README に直接記述）に移行し、v1.1.0 の実装に合わせて更新
 - clang-format によるコードの一括整形
 - clang-tidy の指摘に基づく改善（ラムダのキャプチャの明示、インターフェースのコピー/ムーブ禁止、enum の基底型指定など）
