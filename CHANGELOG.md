@@ -13,6 +13,9 @@
 - 未テストだった引き算・割り算・不正な演算子状態・コントローラのクリアのテスト
 
 ### Changed
+- 状態を型安全に再設計：`hasOp` / `op` / `stored` を `std::optional<PendingOperation>` に統合し、演算子を `enum class Operator` に変更（矛盾した状態を表現できなくした）
+- エラーを `const char*` から `enum class ErrorCode` に変更し、表示文言への変換を UI 層（`errorMessage`）に分離
+- エラーをモーダルダイアログ（QMessageBox）ではなく表示欄に表示するよう変更
 - GitHub Actions をコミット SHA で固定し、checkout で認証情報を保持しないよう変更
 - 設計図を PlantUML + PNG から Mermaid（README に直接記述）に移行し、v1.1.0 の実装に合わせて更新
 - clang-format によるコードの一括整形

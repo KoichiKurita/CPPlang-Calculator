@@ -18,6 +18,6 @@ private:
     std::function<void(Input)> handler_;
 
     void emitDigit(int d);
-    void emitOp(char op);
+    void emitOp(Operator op);
     void emitEqual();
 };

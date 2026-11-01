@@ -21,7 +21,7 @@ This project intentionally applies the same architectural philosophy as the [Num
 - Continuous calculation (e.g. `2 + 3 + 4 = 9`)
 - Operator replacement on repeated input (e.g. `2 + * 3 = 6`)
 - Clear (`C`) button
-- Error handling: division by zero, overflow, invalid input
+- Error handling: division by zero, overflow, invalid input — shown in the display (no modal dialogs)
 - Up to 15 significant digits displayed without exponential notation
 - Event-driven Qt UI
 - Domain logic completely decoupled from UI
@@ -56,6 +56,10 @@ classDiagram
             <<Qt-free>>
             +formatNumber(double) string
         }
+        class ErrorMessage {
+            <<Qt-free>>
+            +errorMessage(ErrorCode) string
+        }
     }
     namespace Application {
         class CalculatorController {
@@ -74,6 +78,7 @@ classDiagram
     }
     ICalculatorUI <|.. QtCalculatorUI
     QtCalculatorUI ..> NumberFormat
+    QtCalculatorUI ..> ErrorMessage
     CalculatorController --> ICalculatorUI
     CalculatorController *-- CalculatorState : owns
     CalculatorController ..> CalculatorLogic
@@ -83,7 +88,7 @@ classDiagram
 
 - The **Domain** and **Application** layers have zero dependency on Qt.
 - The Controller **owns the calculator state** for its entire lifetime.
-- Display formatting (`formatNumber`) is a Qt-free pure function, so it is unit-tested as well.
+- Display formatting (`formatNumber`) and error messages (`errorMessage`) are Qt-free pure functions, so they are unit-tested as well.
 
 ---
 
@@ -91,7 +96,8 @@ classDiagram
 
 The domain consists of:
 
-- `CalculatorState`
+- `CalculatorState` with an optional `PendingOperation` (left operand + `Operator`)
+- `Operator` / `ErrorCode` (`enum class`)
 - `CalculatorEvent` (`std::variant<DisplayUpdated, Error>`)
 - Pure functions:
   - `inputDigit`
@@ -105,10 +111,26 @@ The domain consists of:
 classDiagram
     class CalculatorState {
         +double current
-        +optional~double~ stored
-        +char op
-        +bool hasOp
+        +optional~PendingOperation~ pending
         +bool enteringNumber
+    }
+    class PendingOperation {
+        +double lhs
+        +Operator op
+    }
+    class Operator {
+        <<enumeration>>
+        Add
+        Subtract
+        Multiply
+        Divide
+    }
+    class ErrorCode {
+        <<enumeration>>
+        NoOperation
+        DivisionByZero
+        Overflow
+        InvalidDigit
     }
     class CalculatorEvent {
         <<variant>>
@@ -117,7 +139,7 @@ classDiagram
         +double value
     }
     class Error {
-        +const char* message
+        +ErrorCode code
     }
     class CalculatorLogic {
         <<pure functions>>
@@ -128,6 +150,9 @@ classDiagram
     }
     CalculatorEvent <|-- DisplayUpdated
     CalculatorEvent <|-- Error
+    CalculatorState o-- PendingOperation
+    PendingOperation --> Operator
+    Error --> ErrorCode
     CalculatorLogic ..> CalculatorState : returns new state
     CalculatorLogic ..> CalculatorEvent : returns event
 ```
@@ -138,6 +163,7 @@ classDiagram
 - No framework dependencies
 - Deterministic state transitions
 - Every input is validated; errors are returned as events, never swallowed
+- **Invalid states are unrepresentable**: the left operand and operator exist only together (`std::optional<PendingOperation>`), and operators / errors are `enum class` values instead of `char` / strings
 
 ---
 
@@ -158,7 +184,7 @@ sequenceDiagram
     participant UI as QtCalculatorUI
     participant C as CalculatorController
     participant D as Domain (pure functions)
-    participant F as formatNumber
+    participant F as formatNumber / errorMessage
     User->>UI: press button
     UI->>C: Input
     C->>D: inputDigit / inputOperator / calculate / clearAll
@@ -170,7 +196,9 @@ sequenceDiagram
         F-->>UI: "1234567"
         UI-->>User: update display
     else Error
-        UI-->>User: show error dialog
+        UI->>F: errorMessage(code)
+        F-->>UI: "Cannot divide by zero"
+        UI-->>User: show message in display
     end
 ```
 
@@ -184,9 +212,10 @@ Unit tests are written with **GoogleTest** (fetched via CMake `FetchContent`, pi
 
 | Test suite | Target | What it verifies |
 | --- | --- | --- |
-| `CalculatorLogicTest` | Domain | Arithmetic, continuous calculation, operator replacement, error propagation, input validation, digit limit, overflow |
-| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear (uses a Qt-free `FakeUI`) |
+| `CalculatorLogicTest` | Domain | Four arithmetic operations, continuous calculation, operator replacement, error codes and propagation, input validation, digit limit, overflow |
+| `CalculatorControllerTest` | Application | State is kept after `run()` returns, clear, error replaced by next input (uses a Qt-free `FakeUI`) |
 | `NumberFormatTest` | UI (Qt-free) | 15-digit display, negative numbers, decimals, `-0` |
+| `ErrorMessageTest` | UI (Qt-free) | A message for every `ErrorCode` |
 
 Because the domain and application layers are Qt-free, tests can be built **without Qt**:
 

@@ -11,6 +11,7 @@ public:
 
     void press(Input input) { handler_(input); }
     double display() const { return std::get<DisplayUpdated>(lastEvent_).value; }
+    bool showsError() const { return std::holds_alternative<Error>(lastEvent_); }
 
 private:
     std::function<void(Input)> handler_;
@@ -25,7 +26,7 @@ TEST(CalculatorControllerTest, KeepsStateAfterRunReturns) {
     controller.run(); // run() が戻った後も入力を処理できること
 
     ui.press({InputType::Digit, 1});
-    ui.press({InputType::Operator, 0, '+'});
+    ui.press({InputType::Operator, 0, Operator::Add});
     ui.press({InputType::Digit, 2});
     ui.press({InputType::Equal});
 
@@ -41,4 +42,23 @@ TEST(CalculatorControllerTest, ClearResetsDisplay) {
     ui.press({InputType::Clear});
 
     EXPECT_DOUBLE_EQ(ui.display(), 0.0);
+}
+
+TEST(CalculatorControllerTest, ErrorIsReplacedByNextInput) {
+    FakeUI ui;
+    CalculatorController controller(ui);
+    controller.run();
+
+    // 5 / 0 = → エラー表示
+    ui.press({InputType::Digit, 5});
+    ui.press({InputType::Operator, 0, Operator::Divide});
+    ui.press({InputType::Digit, 0});
+    ui.press({InputType::Equal});
+    ASSERT_TRUE(ui.showsError());
+
+    // 次の入力で表示が数値に戻る
+    ui.press({InputType::Clear});
+    ui.press({InputType::Digit, 3});
+    EXPECT_FALSE(ui.showsError());
+    EXPECT_DOUBLE_EQ(ui.display(), 3.0);
 }

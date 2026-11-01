@@ -10,7 +10,8 @@ void CalculatorController::run() {
 }
 
 void CalculatorController::handle(const Input& input) {
-    std::pair<CalculatorState, CalculatorEvent> result{state_, Error{"Unknown input"}};
+    // 初期値は「何も変えない」。switch で InputType の全ての値を扱う
+    std::pair<CalculatorState, CalculatorEvent> result{state_, DisplayUpdated{state_.current}};
 
     switch (input.type) {
         case InputType::Digit:    result = inputDigit(state_, input.value); break;
