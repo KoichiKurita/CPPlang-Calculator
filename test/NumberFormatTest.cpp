@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "ui/NumberFormat.h"
+#include <gtest/gtest.h>
 
 TEST(NumberFormatTest, SmallIntegerIsShownAsIs) {
     EXPECT_EQ(formatNumber(5), "5");
