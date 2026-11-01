@@ -1,13 +1,19 @@
 #include "app/CalculatorController.h"
 #include "ui/QtCalculatorUI.h"
+#include "ui/QtHistoryStore.h"
 #include <QApplication>
 #include <QTimer>
 
 int main(int argc, char* argv[]) {
     const QApplication app(argc, argv);
+    // QSettings の保存場所は組織名・アプリ名で決まる（例: Linux は
+    // ~/.config/KoichiKurita/QtCalculator.conf）
+    QCoreApplication::setOrganizationName(QStringLiteral("KoichiKurita"));
+    QCoreApplication::setApplicationName(QStringLiteral("QtCalculator"));
 
     QtCalculatorUI ui;
-    CalculatorController controller(ui);
+    QtHistoryStore historyStore;
+    CalculatorController controller(ui, historyStore);
 
     controller.run();
     ui.show();
